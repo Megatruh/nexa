@@ -1,0 +1,23 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class StudyProgram extends Model
+{
+    /** @use HasFactory<\Database\Factories\StudyProgramFactory> */
+    use HasFactory;
+    protected $fillable = [
+        'name', 
+        'university', 
+        'category', 
+        'passing_grade_avg', 
+        'description', 
+        'prospect'
+    ];
+
+
+
+}

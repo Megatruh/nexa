@@ -13,8 +13,8 @@ return new class extends Migration
     {
         Schema::create('tryout_sessions', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('user_id');
-            $table->foreign('user_id')->references('id')->on('users');
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('study_program_id')->constrained()->cascadeOnDelete();
             $table->dateTime('started_at');
             $table->dateTime('finished_at')->nullable();
             $table->integer('total_score')->nullable();

@@ -13,8 +13,7 @@ return new class extends Migration
     {
         Schema::create('learning_materials', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('subtests_id');
-            $table->foreign('subtests_id')->references('id')->on('subtests');
+            $table->foreignId('subtest_id')->constrained('subtests')->onDelete('cascade');
             $table->string('title');
             $table->enum('type',['materi', 'latsol']);
             $table->string('file_path');

@@ -1,0 +1,25 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-primary:   #6C4FF6;
+  --color-secondary: #9B7FFA;
+  --color-dark:      #0D0A1E;
+  --color-card:      #1A1535;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0;}
+
+body {
+  background-color: var(--color-dark);
+  color: #ffffff;
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar       { width: 6px; }
+::-webkit-scrollbar-track { background: #0D0A1E; }
+::-webkit-scrollbar-thumb { background: #6C4FF6; border-radius: 3px; }

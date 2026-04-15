@@ -4,7 +4,7 @@ import Button from '@components/ui/Button';
 import { Target, GraduationCap, BookOpen, PenTool } from 'lucide-react';
 
 const features = [
-  { icon: Target, title: 'Kesesuaian Jurusan', desc: 'Temukan jurusan yang paling sesuai dengan mina dan bakatmu melalui survei interaktif.', to: '/src/Pages/KesesuaianJurusan'},
+  { icon: Target, title: 'Kesesuaian Jurusan', desc: 'Temukan jurusan yang paling sesuai dengan mina dan bakatmu melalui survei interaktif.', to: '/src/Pages/HasilKesesuaian'},
   { icon: GraduationCap, title: 'Ulasan Prodi', desc: 'Jelajahi program studi di berbagai perguruan tinggi Indonesia', to: '/src/Pages/UlasanProdi'},
   { icon: BookOpen, title: 'Belajar', desc: 'Akses materi pembelajaran yang lengkap dan terstruktur untuk persiapan UTBK', to: '/src/Pages/Belajar'},
   { icon: PenTool, title: 'Try Out', desc: 'Simulasi ujian UTBK dengan soal-soal terbaru untuk persiapan maksimal', to: '/src/Pages/TryOut'},
@@ -21,13 +21,13 @@ export default function Beranda() {
           transition={{ duration: 0.7 }}
           className="relative z-10 max-w-3xl"
           >
-            <h1 className="font-display font-bold text-6xl md:text-7xl text-white mb-6 tracking-tight">
+            <h1 className="font-display font-bold text-center text-6xl mt-10 md:text-7xl text-white mb-6 tracking-tight">
               NEXA
             </h1>
-            <h2 className="font-display font-semibold text-xl md:text-2xl text-white/80 mb-4 leading-relaxed">
+            <h2 className="font-display font-semibold text-center text-xl md:text-2xl text-white/80 mb-4 leading-relaxed">
               Pengembangan Aplikasi Simulasi UTBK-SNBT <br/>dan Analisis Peluang Masuk Program Studi
             </h2>
-            <p className="text-white/50 text-base mb-10 max-w-xl mx-auto">
+            <p className="text-white/50 text-base text-center mb-10 max-w-xl mx-auto">
               Persiapkan dirimu menghadapi UTBK-SNBT dengan simulasi realistis, materi lengkapm dan analisis peluang masuk yang akurat.
             </p>
             <div className="flex gap-4 justify-center flex-wrap">
@@ -38,7 +38,7 @@ export default function Beranda() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 px-6 max-w-7xl max-auto">
+      <section className="py-20 px-6 max-w-7xl items-center mx-auto">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((f, i) => (
             <motion.a

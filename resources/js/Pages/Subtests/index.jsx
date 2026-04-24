@@ -4,11 +4,11 @@ import { Head } from '@inertiajs/react';
 export default function Index({ subtests }) {
     return (
         <AuthenticatedLayout
-            header={
-                <h2 className="text-xl font-semibold leading-tight text-gray-800 dark:text-gray-200">
-                    Daftar Subtes UTBK
-                </h2>
-            }
+            // header={
+            //     <h2 className="text-xl font-semibold leading-tight text-gray-800">
+            //         Daftar Subtes UTBK
+            //     </h2>
+            // }
         >
             <Head title="Subtest" />
 
@@ -18,19 +18,19 @@ export default function Index({ subtests }) {
                         {subtests.map((subtest) => (
                             <div 
                                 key={subtest.id} 
-                                className="overflow-hidden bg-white shadow-sm sm:rounded-lg dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-indigo-500 transition-all cursor-pointer"
+                                className="overflow-hidden bg-white shadow-sm sm:rounded-lg border border-gray-200 hover:border-indigo-500 transition-all cursor-pointer"
                             >
-                                <div className="p-6 text-gray-900 dark:text-gray-100">
+                                <div className="p-6 text-gray-900">
                                     <div className="flex justify-between items-start mb-4">
-                                        <h3 className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+                                        <h3 className="text-lg font-bold text-indigo-600 ">
                                             {subtest.name}
                                         </h3>
-                                        <span className="bg-indigo-100 text-indigo-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-indigo-900 dark:text-indigo-300">
+                                        <span className="bg-indigo-100 text-indigo-800 text-xs font-medium px-2.5 py-0.5 rounded">
                                             {subtest.questions_count} Soal
                                         </span>
                                     </div>
                                     
-                                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 line-clamp-2">
+                                    <p className="text-sm text-gray-600  mb-6 line-clamp-2">
                                         {subtest.description || 'Belum ada deskripsi untuk subtes ini.'}
                                     </p>
 
@@ -52,10 +52,3 @@ export default function Index({ subtests }) {
     );
 }
 
-// export default function Index({ subtests }) {
-//     return (
-//         <div className="p-10">
-//             <h1>Halo Han! Datanya ada {subtests.length}</h1>
-//         </div>
-//     );
-// }

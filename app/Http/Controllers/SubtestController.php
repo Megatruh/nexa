@@ -4,8 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Subtest;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
+
+
 
 class SubtestController extends Controller
 {
@@ -21,7 +24,7 @@ class SubtestController extends Controller
         return Inertia::render('Subtests/index', [
             'subtests' => $subtests,
             'auth' => [
-                'user' => auth()->user(),
+                'user' => Auth::user(),
             ],
         ]);
     }

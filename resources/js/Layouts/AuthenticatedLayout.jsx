@@ -6,7 +6,8 @@ import { Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 
 export default function AuthenticatedLayout({ header, children }) {
-    const user = usePage().props.auth.user;
+    const {auth} = usePage().props;
+    const user = auth.user;
 
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
         useState(false);
@@ -18,7 +19,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     <div className="flex h-16 justify-between">
                         <div className="flex">
                             <div className="flex shrink-0 items-center">
-                                <Link href="/">
+                                <Link href={user?.role == 'admin' ? route('admin.dashboard') : route('dashboard')}>
                                     <ApplicationLogo className="block h-9 w-auto fill-current text-gray-800" />
                                 </Link>
                             </div>
@@ -28,13 +29,69 @@ export default function AuthenticatedLayout({ header, children }) {
                                     href={route('dashboard')}
                                     active={route().current('dashboard')}
                                 >
-                                    Dashboard
+                                    Beranda
                                 </NavLink>
+                                {/* Navbar Admin */}
+                                {user?.role == 'admin' && (
+                                    <>
+                                        <NavLink
+                                            // href='#'
+                                            // active={false}
+                                            href={route('manage.questions')}
+                                            active={route().current('manage.questions')}
+                                        >
+                                            Kelola Soal
+                                        </NavLink>
+
+                                        <NavLink
+                                            // href='#'
+                                            // active={false}
+                                            href={route('manage.users')}
+                                            active={route().current('manage.users')}
+                                        >
+                                            Kelola Pengguna
+                                        </NavLink>
+                                    </>
+                                )}
+
+                                {/* Navbar User/Guest */}
+                                {user?.role != 'admin' && (
+                                    <>
+                                        <NavLink
+                                            href={route('jurusan.index')}
+                                            active={route().current('jurusan.index')}
+                                        >
+                                            Kesesuaian Jurusan
+                                        </NavLink>
+
+                                        <NavLink
+                                            href={route('prodi.index')}
+                                            active={route().current('prodi.index')}
+                                        >
+                                            Ulasasn Prodi
+                                        </NavLink>
+
+                                        <NavLink
+                                            href={route('subtests.index')}
+                                            active={route().current('subtests.index')}
+                                        >
+                                            Belajar
+                                        </NavLink>
+
+                                        <NavLink 
+                                            href={auth.user ? route('tryout.index') : route('login')}
+                                            active={route().current('tryout.index')}
+                                        >
+                                            Tryout {/* Belum dibuat */}
+                                        </NavLink>
+                                    </>
+                                )}
                             </div>
                         </div>
 
                         <div className="hidden sm:ms-6 sm:flex sm:items-center">
-                            <div className="relative ms-3">
+                            {user ? (
+                               <div className="relative ms-3">
                                 <Dropdown>
                                     <Dropdown.Trigger>
                                         <span className="inline-flex rounded-md">
@@ -75,7 +132,25 @@ export default function AuthenticatedLayout({ header, children }) {
                                         </Dropdown.Link>
                                     </Dropdown.Content>
                                 </Dropdown>
-                            </div>
+                                </div> 
+                            ) : (
+                                // kalau belum login
+                                <div className="flex space-x-4">
+                                    <Link
+                                        href={route('login')}
+                                        className="text-sm font-medium text-gray-500 hover:text-gray-700"
+                                    >
+                                        Masuk
+                                    </Link>
+                                    <Link
+                                        href={route('register')}
+                                        className="inline-flex items-center rounded-md border border-transparent bg-indigo-600 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white transition duration-150 ease-in-out hover:bg-indigo-700"
+                                    >
+                                        Daftar
+                                    </Link>
+                                </div>
+                            )}
+                            
                         </div>
 
                         <div className="-me-2 flex items-center sm:hidden">
@@ -139,10 +214,10 @@ export default function AuthenticatedLayout({ header, children }) {
                     <div className="border-t border-gray-200 pb-1 pt-4">
                         <div className="px-4">
                             <div className="text-base font-medium text-gray-800">
-                                {user.name}
+                                {user?.name}
                             </div>
                             <div className="text-sm font-medium text-gray-500">
-                                {user.email}
+                                {user?.email}
                             </div>
                         </div>
 

@@ -1,19 +1,39 @@
-// src/store/authStore.js
-import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
+/**
+ * Auth Store - Zustand
+ * Menyimpan state autentikasi pengguna secara global
+ */
 
-const useAuthStore = create(
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+
+export const useAuthStore = create(
   persist(
     (set) => ({
-      user:  null,
+      user: null,
       token: null,
+      isAuthenticated: false,
+      isLoading: false,
 
-      setUser:  (user)  => set({ user }),
-      setToken: (token) => set({ token }),
-      logout:   ()      => set({ user: null, token: null }),
+      setAuth: (user, token) =>
+        set({ user, token, isAuthenticated: true }),
+
+      clearAuth: () =>
+        set({ user: null, token: null, isAuthenticated: false }),
+
+      setLoading: (isLoading) => set({ isLoading }),
+
+      updateUser: (userData) =>
+        set((state) => ({
+          user: { ...state.user, ...userData },
+        })),
     }),
-    { name: 'nexa-auth' }
+    {
+      name: "nexa-auth", // key di localStorage
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+        isAuthenticated: state.isAuthenticated,
+      }),
+    }
   )
-)
-
-export default useAuthStore
+);

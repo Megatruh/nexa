@@ -1,16 +1,15 @@
 /**
- * Belajar/index.jsx - Halaman Materi Belajar
- * Menampilkan daftar subtes UTBK dalam bentuk card grid
- * User memilih subtes untuk melihat daftar materi PDF
+ * LatihanSoal - Halaman pilih subtes latihan soal
+ * Mirip MateriList tapi untuk latihan soal (mirip screenshot page-belajar-latihansoal)
  */
 
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { BookOpen } from "lucide-react";
+import { PenLine } from "lucide-react";
 import { PageWrapper } from "../../components/layout/PageWrapper";
 import { SUBTES_LIST } from "../../constants/subtesTryOut";
 
-export default function MateriList() {
+export default function LatihanSoal() {
   const navigate = useNavigate();
 
   return (
@@ -18,10 +17,10 @@ export default function MateriList() {
       {/* Header */}
       <div className="mb-10">
         <h1 className="text-3xl font-bold text-white font-syne mb-2">
-          Materi Belajar
+          Latihan Soal
         </h1>
         <p className="text-purple-300 font-syne text-sm">
-          Pilih subtes UTBK-SNBT untuk mulai belajar.
+          Pilih subtes untuk berlatih soal-soal UTBK-SNBT.
         </p>
       </div>
 
@@ -30,15 +29,14 @@ export default function MateriList() {
         {SUBTES_LIST.map((subtes) => (
           <button
             key={subtes.id}
-            onClick={() => navigate(`/belajar/materi/${subtes.id}`)}
+            onClick={() => navigate(`/belajar/latihan-soal/${subtes.id}`)}
             className="subtest-card text-left p-5 group"
           >
-            {/* Bg visual */}
             <div
               className="absolute inset-0 rounded-xl opacity-30"
               style={{
                 background:
-                  "linear-gradient(135deg, rgba(124,58,237,0.4) 0%, rgba(91,33,182,0.2) 60%, transparent 100%)",
+                  "linear-gradient(135deg, rgba(109,40,217,0.4) 0%, rgba(76,29,149,0.2) 60%, transparent 100%)",
               }}
             />
             <div className="relative z-10">
@@ -49,13 +47,13 @@ export default function MateriList() {
                   border: "1px solid rgba(167,139,250,0.25)",
                 }}
               >
-                <BookOpen size={18} className="text-purple-300" />
+                <PenLine size={18} className="text-purple-300" />
               </div>
               <h3 className="font-bold text-white font-syne text-sm leading-snug mb-1 group-hover:text-purple-200 transition-colors">
                 {subtes.nama}
               </h3>
               <p className="text-xs text-purple-400 font-syne">
-                {subtes.materiTersedia} Materi Tersedia
+                {subtes.paketLatihan} Paket Latihan
               </p>
             </div>
           </button>

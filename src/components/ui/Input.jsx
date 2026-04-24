@@ -1,59 +1,84 @@
-import clsx from 'clsx'
+/**
+ * Input - Komponen input field NEXA
+ */
 
-export default function Input({
+import React from "react";
+
+export function Input({
   label,
-  type = 'text',
-  placeholder = '',
+  placeholder,
   value,
   onChange,
-  error = '',
-  disabled = false,
-  icon: Icon = null,
-  className = '',
+  type = "text",
+  error,
+  icon: Icon,
+  className = "",
   ...props
 }) {
   return (
-    <div className="flex flex-col gap-1.5 w-full">
-      {/* Label */}
+    <div className={`w-full ${className}`}>
       {label && (
-        <label className="text-sm font-medium text-white/70">
+        <label className="block text-sm font-semibold text-purple-300 mb-2 font-syne">
           {label}
         </label>
       )}
-
-      {/* Input Wrapper */}
       <div className="relative">
-        {/* Icon kiri */}
         {Icon && (
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-white/40">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-purple-400">
             <Icon size={16} />
           </div>
         )}
-
         <input
           type={type}
           value={value}
           onChange={onChange}
           placeholder={placeholder}
-          disabled={disabled}
-          className={clsx(
-            'w-full px-4 py-3 rounded-xl text-sm text-white placeholder-white/30',
-            'bg-nexa-card border transition-all duration-200 outline-none',
-            Icon && 'pl-10',
-            error
-              ? 'border-red-500 focus:border-red-400'
-              : 'border-nexa-border focus:border-nexa-primary',
-            disabled && 'opacity-50 cursor-not-allowed',
-            className
-          )}
+          className={`
+            nexa-input
+            ${Icon ? "pl-10" : ""}
+            ${error ? "border-red-500/50 focus:border-red-500" : ""}
+          `}
           {...props}
         />
       </div>
-
-      {/* Pesan Error */}
       {error && (
-        <p className="text-xs text-red-400 mt-0.5">{error}</p>
+        <p className="mt-1.5 text-xs text-red-400 font-syne">{error}</p>
       )}
     </div>
-  )
+  );
+}
+
+export function Textarea({
+  label,
+  placeholder,
+  value,
+  onChange,
+  error,
+  rows = 4,
+  className = "",
+  ...props
+}) {
+  return (
+    <div className={`w-full ${className}`}>
+      {label && (
+        <label className="block text-sm font-semibold text-purple-300 mb-2 font-syne">
+          {label}
+        </label>
+      )}
+      <textarea
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        rows={rows}
+        className={`
+          nexa-input resize-none
+          ${error ? "border-red-500/50 focus:border-red-500" : ""}
+        `}
+        {...props}
+      />
+      {error && (
+        <p className="mt-1.5 text-xs text-red-400 font-syne">{error}</p>
+      )}
+    </div>
+  );
 }

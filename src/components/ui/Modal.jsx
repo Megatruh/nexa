@@ -1,91 +1,69 @@
-import { useEffect } from 'react'
-import { X } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+/**
+ * Modal - Dialog overlay NEXA
+ */
 
-export default function Modal({
-  isOpen,
-  onClose,
-  title = '',
-  children,
-  size = 'md',
-}) {
-  const sizes = {
-    sm:  'max-w-sm',
-    md:  'max-w-md',
-    lg:  'max-w-lg',
-    xl:  'max-w-2xl',
-    full:'max-w-4xl',
-  }
+import React, { useEffect } from "react";
+import { X } from "lucide-react";
 
-  // Tutup modal saat tekan Escape
+export function Modal({ isOpen, onClose, title, children, size = "md" }) {
+  // Tutup dengan ESC
   useEffect(() => {
-    const handleKey = (e) => { if (e.key === 'Escape') onClose() }
-    if (isOpen) document.addEventListener('keydown', handleKey)
-    return () => document.removeEventListener('keydown', handleKey)
-  }, [isOpen, onClose])
+    const handler = (e) => {
+      if (e.key === "Escape") onClose?.();
+    };
+    if (isOpen) {
+      document.addEventListener("keydown", handler);
+      document.body.style.overflow = "hidden";
+    }
+    return () => {
+      document.removeEventListener("keydown", handler);
+      document.body.style.overflow = "";
+    };
+  }, [isOpen, onClose]);
 
-  // Cegah scroll saat modal terbuka
-  useEffect(() => {
-    document.body.style.overflow = isOpen ? 'hidden' : 'unset'
-    return () => { document.body.style.overflow = 'unset' }
-  }, [isOpen])
+  if (!isOpen) return null;
+
+  const sizeClass = {
+    sm: "max-w-md",
+    md: "max-w-lg",
+    lg: "max-w-2xl",
+    xl: "max-w-4xl",
+  }[size] || "max-w-lg";
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Overlay */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
-          />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
 
-          {/* Modal Box */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1,    y: 0  }}
-              exit={{    opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ duration: 0.2 }}
-              className={`relative w-full ${sizes[size]} bg-[#1A1535] border border-nexa-border rounded-2xl shadow-2xl`}
+      {/* Modal Content */}
+      <div
+        className={`
+          relative ${sizeClass} w-full
+          bg-gradient-to-br from-[#1a1040] to-[#0d0820]
+          border border-purple-500/30 rounded-2xl
+          shadow-2xl shadow-purple-900/50
+          animate-slide-up
+        `}
+      >
+        {/* Header */}
+        {title && (
+          <div className="flex items-center justify-between p-5 border-b border-purple-500/20">
+            <h3 className="text-lg font-bold text-white font-syne">{title}</h3>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-purple-400 hover:text-white hover:bg-purple-500/20 transition-colors"
             >
-              {/* Header */}
-              {title && (
-                <div className="flex items-center justify-between px-6 py-4 border-b border-nexa-border">
-                  <h2 className="font-display font-semibold text-white text-lg">
-                    {title}
-                  </h2>
-                  <button
-                    onClick={onClose}
-                    className="w-8 h-8 flex items-center justify-center rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-all"
-                  >
-                    <X size={18} />
-                  </button>
-                </div>
-              )}
-
-              {/* Tombol Close (tanpa title) */}
-              {!title && (
-                <button
-                  onClick={onClose}
-                  className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center
-                             rounded-full text-white/50 hover:text-white hover:bg-white/10 transition-all z-10"
-                >
-                  <X size={18} />
-                </button>
-              )}
-
-              {/* Content */}
-              <div className="px-6 py-5">
-                {children}
-              </div>
-            </motion.div>
+              <X size={18} />
+            </button>
           </div>
-        </>
-      )}
-    </AnimatePresence>
-  )
+        )}
+
+        {/* Body */}
+        <div className="p-5">{children}</div>
+      </div>
+    </div>
+  );
 }

@@ -1,73 +1,160 @@
-import { useNavigate } from 'react-router-dom'
-import { CheckCircle, ArrowRight } from 'lucide-react'
-import Button from '@components/ui/Button'
+/**
+ * HasilKesesuaian - Hasil analisis kesesuaian jurusan
+ * Menampilkan rekomendasi prodi berdasarkan jawaban survei
+ */
+
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { Target, ChevronRight, RotateCcw, TrendingUp } from "lucide-react";
+import { PageWrapper } from "../../components/layout/PageWrapper";
+import { ProdiCard } from "../../components/shared/ProdiCard";
+import { Badge } from "../../components/ui/Badge";
+import { useProdiStore } from "../../store/prodiStore";
+import { DATA_PRODI, KATEGORI_PRODI } from "../../constants/kategoriProdi";
+import { ROUTES } from "../../constants/routes";
+
+const LABEL_KATEGORI = KATEGORI_PRODI.reduce((acc, k) => {
+  acc[k.id] = k.label;
+  return acc;
+}, {});
 
 export default function HasilKesesuaian() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
+  const { hasilKesesuaian, resetSurvei } = useProdiStore();
 
-  const hasilRekomendasi = [
-    {
-      jurusan: 'Teknik Informatika',
-      persentase: 85,
-      deskripsi: 'Cocok dengan minat Anda pada teknologi dan problem-solving',
-      universitas: 'ITB, UI, UGM',
-    },
-    {
-      jurusan: 'Sistem Informasi',
-      persentase: 78,
-      deskripsi: 'Domain bisnis dan teknologi yang seimbang',
-      universitas: 'BINUS, ITB, Telkom University',
-    },
-    {
-      jurusan: 'Teknik Komputer',
-      persentase: 72,
-      deskripsi: 'Fokus pada hardware dan infrastruktur teknologi',
-      universitas: 'UI, ITB, UNPAR',
-    },
-  ]
+  if (!hasilKesesuaian) {
+    navigate(ROUTES.KESESUAIAN);
+    return null;
+  }
+
+  const { kategoriUtama, kategoriLainnya, skorKategori } = hasilKesesuaian;
+
+  // Filter prodi sesuai kategori utama
+  const prodiRekomendasi = DATA_PRODI.filter(
+    (p) => p.kategori === kategoriUtama
+  ).slice(0, 3);
+
+  const prodiTambahan = DATA_PRODI.filter(
+    (p) => kategoriLainnya.includes(p.kategori) && p.kategori !== kategoriUtama
+  ).slice(0, 3);
+
+  const ulangiSurvei = () => {
+    resetSurvei();
+    navigate(ROUTES.KESESUAIAN);
+  };
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-12">
-      <div className="text-center mb-12">
-        <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-        <h1 className="font-display font-bold text-3xl text-white mb-2">Hasil Tes Selesai!</h1>
-        <p className="text-white/60">Berikut rekomendasi jurusan yang sesuai dengan profil Anda</p>
+    <PageWrapper>
+      {/* Header hasil */}
+      <div className="text-center mb-10">
+        <div
+          className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5"
+          style={{
+            background: "rgba(124,58,237,0.2)",
+            border: "1px solid rgba(167,139,250,0.3)",
+          }}
+        >
+          <Target size={32} className="text-purple-300" />
+        </div>
+        <h1 className="text-3xl font-bold text-white font-syne mb-3">
+          Hasil Analisis Jurusan
+        </h1>
+        <p className="text-purple-300 font-syne">
+          Berdasarkan survei, profil minatmu paling cocok dengan bidang:
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+          <Badge variant="default" className="text-sm px-4 py-1">
+            🎯 {LABEL_KATEGORI[kategoriUtama] || kategoriUtama}
+          </Badge>
+          {kategoriLainnya.map((k) => (
+            <Badge key={k} variant="info" className="text-sm px-3 py-1">
+              {LABEL_KATEGORI[k] || k}
+            </Badge>
+          ))}
+        </div>
       </div>
 
-      <div className="space-y-4 mb-8">
-        {hasilRekomendasi.map((result, idx) => (
-          <div key={idx} className="bg-nexa-card border border-nexa-border rounded-lg p-6">
-            <div className="flex items-start justify-between mb-4">
-              <div>
-                <h3 className="font-semibold text-white text-lg mb-1">{result.jurusan}</h3>
-                <p className="text-white/60 text-sm">{result.deskripsi}</p>
-              </div>
-              <div className="text-right">
-                <span className="text-2xl font-bold text-nexa-primary">{result.persentase}%</span>
-                <p className="text-white/60 text-xs">Kesesuaian</p>
-              </div>
-            </div>
-            <div className="h-2 bg-nexa-border rounded-full overflow-hidden mb-3">
-              <div className="h-full bg-gradient-to-r from-nexa-primary to-nexa-secondary" style={{ width: `${result.persentase}%` }}></div>
-            </div>
-            <p className="text-white/60 text-sm"><span className="text-white font-semibold">Universitas:</span> {result.universitas}</p>
+      {/* Skor kategori */}
+      <div
+        className="nexa-card p-6 mb-10"
+        style={{ maxWidth: 600, margin: "0 auto 2.5rem" }}
+      >
+        <div className="flex items-center gap-2 mb-5">
+          <TrendingUp size={18} className="text-purple-400" />
+          <h3 className="font-bold text-white font-syne">Profil Minat</h3>
+        </div>
+        <div className="space-y-3">
+          {Object.entries(skorKategori)
+            .sort((a, b) => b[1] - a[1])
+            .map(([kat, skor]) => {
+              const max = Math.max(...Object.values(skorKategori));
+              const persen = (skor / max) * 100;
+              return (
+                <div key={kat}>
+                  <div className="flex justify-between text-xs text-purple-300 font-syne mb-1">
+                    <span>{LABEL_KATEGORI[kat] || kat}</span>
+                    <span className="font-mono font-bold">{Math.round(persen)}%</span>
+                  </div>
+                  <div className="h-1.5 bg-purple-900/40 rounded-full">
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{
+                        width: `${persen}%`,
+                        background: "linear-gradient(90deg, #7c3aed, #a78bfa)",
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      </div>
+
+      {/* Rekomendasi prodi utama */}
+      {prodiRekomendasi.length > 0 && (
+        <section className="mb-10">
+          <h2 className="text-xl font-bold text-white font-syne mb-5">
+            Rekomendasi Prodi Untukmu
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {prodiRekomendasi.map((prodi) => (
+              <ProdiCard key={prodi.id} prodi={prodi} />
+            ))}
           </div>
-        ))}
-      </div>
+        </section>
+      )}
 
-      <div className="bg-nexa-card border border-nexa-border rounded-lg p-6 mb-8">
-        <h2 className="font-semibold text-white mb-4">Langkah Selanjutnya</h2>
-        <ul className="space-y-2 text-white/80 text-sm">
-          <li>✓ Jelajahi ulasan program studi untuk informasi lebih detail</li>
-          <li>✓ Pelajari materi UTBK di bagian Belajar</li>
-          <li>✓ Ikuti try out untuk mengukur kesiapanmu</li>
-        </ul>
-      </div>
+      {/* Prodi tambahan */}
+      {prodiTambahan.length > 0 && (
+        <section className="mb-10">
+          <h2 className="text-xl font-bold text-white font-syne mb-5">
+            Pertimbangan Lainnya
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {prodiTambahan.map((prodi) => (
+              <ProdiCard key={prodi.id} prodi={prodi} />
+            ))}
+          </div>
+        </section>
+      )}
 
-      <div className="flex gap-3 justify-center">
-        <Button variant="outline" onClick={() => navigate('/ulasan-prodi')}>Lihat Ulasan Prodi</Button>
-        <Button onClick={() => navigate('/belajar')}>Mulai Belajar <ArrowRight size={18} /></Button>
+      {/* Actions */}
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
+        <button
+          onClick={() => navigate(ROUTES.ULASAN_PRODI)}
+          className="nexa-btn-primary flex items-center gap-2"
+        >
+          Jelajahi Semua Prodi
+          <ChevronRight size={16} />
+        </button>
+        <button
+          onClick={ulangiSurvei}
+          className="nexa-btn-secondary flex items-center gap-2"
+        >
+          <RotateCcw size={16} />
+          Ulangi Survei
+        </button>
       </div>
-    </div>
-  )
+    </PageWrapper>
+  );
 }

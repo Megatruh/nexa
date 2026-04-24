@@ -1,21 +1,40 @@
-import clsx from "clsx";
+/**
+ * Card - Container kartu dengan style NEXA space-theme
+ */
 
-export default function Card({
-  children,
-  className = '',
-  hover = true,
-  ...props
-}) {
+import React from "react";
+
+export function Card({ children, className = "", hover = true, onClick }) {
   return (
-    <div className={clsx(
-      'bg-card-gradient border border-nexa-border rounded-2xl p-6',
-      'backdrop-blur-sm',
-      hover && 'hover:bordeer-nexa-primary/50 hover:shadow-lg hover:shadow-nexa-primary/10 transition-all duration-300',
-      className
-    )}
-    {...props}
+    <div
+      className={`
+        nexa-card p-5
+        ${hover ? "cursor-pointer" : ""}
+        ${className}
+      `}
+      onClick={onClick}
     >
       {children}
     </div>
-  )
+  );
+}
+
+export function CardHeader({ children, className = "" }) {
+  return (
+    <div className={`mb-4 ${className}`}>
+      {children}
+    </div>
+  );
+}
+
+export function CardBody({ children, className = "" }) {
+  return <div className={className}>{children}</div>;
+}
+
+export function CardFooter({ children, className = "" }) {
+  return (
+    <div className={`mt-4 pt-4 border-t border-purple-500/20 ${className}`}>
+      {children}
+    </div>
+  );
 }

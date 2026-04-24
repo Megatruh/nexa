@@ -1,40 +1,79 @@
-import clsx from "clsx";
+/**
+ * Button - Komponen tombol reusable NEXA
+ * Mendukung variant: primary, secondary, ghost, danger
+ */
 
-const variants = {
-  primary:  'bg-nexa-primary hover:bg-nexa-secondary text-white shadow-lg shadow-nexa-primary/30',
-  outline:  'border border-nexa-primary text-nexa-primary hover:bg-nexa-primary/10',
-  ghost:    'text-white/70 hover:text-white hover:bg-white/10',
-  danger:   'bg-red-500 hover:bg-red-600 text-white'
-}
+import React from "react";
 
-const sizes = {
-  sm: 'px-4 py-2 text-sm',
-  md: 'px-6 py-3 text-base',
-  lg: 'px-8 py-4 text-lg'
-}
+const variantStyles = {
+  primary: "nexa-btn-primary",
+  secondary: "nexa-btn-secondary",
+  ghost:
+    "bg-transparent border border-transparent text-purple-300 hover:text-white hover:bg-white/5 px-4 py-2.5 rounded-lg font-semibold transition-all duration-200 cursor-pointer text-sm",
+  danger:
+    "bg-red-500/20 border border-red-500/40 text-red-300 hover:bg-red-500/30 hover:border-red-400 px-4 py-2.5 rounded-lg font-semibold transition-all duration-200 cursor-pointer text-sm font-syne",
+  outline:
+    "bg-transparent border border-purple-400/50 text-purple-300 hover:border-purple-300 hover:text-white px-4 py-2.5 rounded-lg font-semibold transition-all duration-200 cursor-pointer text-sm font-syne",
+};
 
-export default function Button({
+const sizeStyles = {
+  sm: "px-3 py-1.5 text-sm",
+  md: "px-5 py-2.5 text-sm",
+  lg: "px-7 py-3 text-base",
+};
+
+export function Button({
   children,
-  variant = 'primary',
-  size = 'md',
-  className='',
+  variant = "primary",
+  size = "md",
+  className = "",
   disabled = false,
   loading = false,
+  onClick,
+  type = "button",
+  fullWidth = false,
   ...props
-}){
-  return(
-    <button className={clsx(
-      'font-display font-semibold rounded-full transition-all duration-200',
-      'active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed',
-      variants[variant],
-      sizes[size],
-      className
-    )} 
-    disabled={disabled || loading}
-    {...props}
+}) {
+  const baseClass = variantStyles[variant] || variantStyles.primary;
+
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled || loading}
+      className={`
+        ${baseClass}
+        ${fullWidth ? "w-full" : ""}
+        ${disabled || loading ? "opacity-50 cursor-not-allowed" : ""}
+        ${className}
+        inline-flex items-center justify-center gap-2
+        font-syne
+      `}
+      {...props}
     >
-      {loading ? <span className="animate-spin mr-2">⟳</span> : null}
+      {loading && (
+        <svg
+          className="animate-spin h-4 w-4"
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-25"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          />
+          <path
+            className="opacity-75"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+          />
+        </svg>
+      )}
       {children}
     </button>
-  )
+  );
 }

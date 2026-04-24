@@ -1,17 +1,28 @@
-export default function Badge({
-  label,
-  color = 'default'
-}) {
-  const colors = {
-    default:    'bg-white/10 text-white border border-white/20',
-    teknologi:  'bg-blue-500/20  text-blue-300  border border-blue-500/30',
-    kesehatan:  'bg-green-500/20 text-green-300 border border-green-500/30',
-    bisnis:     'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30',
-  }
+/**
+ * Badge - Label status/kategori
+ */
 
+import React from "react";
+
+const variantStyles = {
+  default: "bg-purple-500/20 text-purple-300 border border-purple-500/30",
+  success: "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30",
+  warning: "bg-amber-500/20 text-amber-300 border border-amber-500/30",
+  danger: "bg-red-500/20 text-red-300 border border-red-500/30",
+  info: "bg-blue-500/20 text-blue-300 border border-blue-500/30",
+  gold: "bg-yellow-500/20 text-yellow-300 border border-yellow-500/30",
+};
+
+export function Badge({ children, variant = "default", className = "" }) {
   return (
-    <span className={`px-3 py-1 rounded-full text-xs font-medium ${colors[color] || colors.default}`}>
-      {label}
+    <span
+      className={`
+        inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold font-syne
+        ${variantStyles[variant] || variantStyles.default}
+        ${className}
+      `}
+    >
+      {children}
     </span>
-  )
+  );
 }

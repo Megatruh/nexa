@@ -14,11 +14,10 @@ return new class extends Migration
         Schema::create('study_programs', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('university');
-            $table->enum('category', ['Saintek', 'Soshum']);
+            $table->integer('weight_num');
+            $table->integer('weight_abst');
+            $table->integer('weight_verb');
             $table->integer('passing_grade_avg');
-            $table->text('description')->nullable();
-            $table->text('prospect');
             $table->timestamps();
         });
     }

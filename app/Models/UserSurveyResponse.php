@@ -9,4 +9,9 @@ class UserSurveyResponse extends Model
 {
     /** @use HasFactory<\Database\Factories\UserSurveyResponseFactory> */
     use HasFactory;
+    protected $fillable = [
+        'survey_id',
+        'user_answer',
+        'is_correct',
+    ];
 }

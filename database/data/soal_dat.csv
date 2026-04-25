@@ -1,0 +1,31 @@
+No,Kategori,Pertanyaan,Jawaban A,Jawaban B,Jawaban C,Jawaban D,Kunci,Bobot
+1,Verbal,Api : Panas = Es : ...,Beku,Dingin,Cair,Air,B,1
+2,Verbal,Lapar : Makan = Haus : ...,Minum,Air,Gelas,Dahaga,A,1
+3,Verbal,"Sinonim dari kata ""TENTATIF"" adalah...",Pasti,Berubah,Belum pasti,Segera,C,1
+4,Verbal,"Antonim dari kata ""PROMINEN"" adalah...",Terkemuka,Biasa,Elite,Mewah,B,2
+5,Verbal,Hutan : Pohon = Gurun : ...,Unta,Pasir,Panas,Kering,B,2
+6,Verbal,Kaca : Retak = Kertas : ...,Robek,Gunting,Tulis,Buku,A,2
+7,Verbal,Dokter : Resep = ... : ...,Polisi : Pistol,Hakim : Vonis,Pilot : Pesawat,Koki : Dapur,B,2
+8,Verbal,Padanan kata yang berlawanan: EPILOG >< ...,Dialog,Monolog,Prolog,Katalog,C,3
+9,Verbal,Jenderal : Kolonel : Mayor = ...,Tua : Muda : Bayi,Rektor : Dekan : Dosen,SD : SMP : SMA,Besar : Kecil : Sedang,B,3
+10,Verbal,INSOMNIA : TIDUR = ...,Amnesia : Ingatan,Anoreksia : Kurus,Paranoia : Takut,Disleksia : Menulis,A,3
+11,Numerik,"2, 4, 6, 8, ...",9,10,11,12,B,1
+12,Numerik,"1, 3, 5, 7, ...",8,9,10,11,B,1
+13,Numerik,50% dari 200 adalah...,50,100,150,200,B,1
+14,Numerik,"3, 6, 12, 24, ...",30,36,48,52,C,2
+15,Numerik,"1, 4, 9, 16, ...",20,24,25,36,C,2
+16,Numerik,"Jika x=5 dan y=3, maka hasil dari 2x + 3y adalah...",15,16,19,21,C,2
+17,Numerik,Harga barang diskon 20% dari Rp100.000 menjadi...,Rp20.000,Rp80.000,Rp120.000,Rp100.000,B,2
+18,Numerik,"2, 5, 11, 23, ...",45,46,47,48,C,3
+19,Numerik,"Proyek selesai 12 hari oleh 5 orang. Jika 6 orang, selesai berapa hari?",8 hari,9 hari,10 hari,11 hari,C,3
+20,Numerik,"1/2, 2/3, 3/4, 4/5, ...",4/6,5/6,6/7,5/7,B,3
+21,Abstrak,"A, C, E, G, ...",H,I,J,K,B,1
+22,Abstrak,"Z, X, V, T, ...",S,R,Q,P,B,1
+23,Abstrak,Semua kucing mengeong. Boli adalah kucing.,Boli diam,Boli mengeong,Boli anjing,Boli tidur,B,1
+24,Abstrak,"A, Z, B, Y, C, ...",W,X,V,U,B,2
+25,Abstrak,"C, F, I, L, ...",M,N,O,P,C,2
+26,Abstrak,"Jika hujan, pakai payung. Hari ini hujan.",Pakai payung,Tidak pakai,Hujan reda,Diam saja,A,2
+27,Abstrak,Semua siswa berdasi. Sebagian berjas.,Semua berjas,Sebagian berdasi & berjas,Tidak ada berjas,Semua berdasi & berjas,B,2
+28,Abstrak,"A, B, D, G, K, ...",M,N,O,P,D,3
+29,Abstrak,Budi lebih tinggi dari Ali. Cici lebih tinggi dari Budi. Paling pendek?,Budi,Cici,Ali,Sama tinggi,C,3
+30,Abstrak,"A, C, F, J, O, ...",S,T,U,V,C,3

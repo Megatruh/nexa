@@ -19,7 +19,8 @@ class DatabaseSeeder extends Seeder
             UserSeeder::class,
             SubtestSeeder::class,
             StudyProgramSeeder::class,
-            QuestionSeeder::class
+            QuestionSeeder::class,
+            SurveySeeder::class,
         ]);
 
 

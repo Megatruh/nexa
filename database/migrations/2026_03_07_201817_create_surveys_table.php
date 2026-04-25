@@ -13,9 +13,15 @@ return new class extends Migration
     {
         Schema::create('surveys', function (Blueprint $table) {
             $table->id();
-            $table->string('question_text');
-            $table->string('target_category');
-            $table->timestamps();
+            $table->string('category')->nullable(); // Numerik atau Verbal
+            $table->text('question')->nullable();
+            $table->string('option_a')->nullable();
+            $table->string('option_b')->nullable();
+            $table->string('option_c')->nullable();
+            $table->string('option_d')->nullable();
+            $table->char('correct_answer', 1)->nullable();
+            $table->integer('item_weight')->default(1);
+            $table->timestamps();  // Tambahkan ini
         });
     }
 

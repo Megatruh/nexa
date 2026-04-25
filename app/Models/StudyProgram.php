@@ -11,11 +11,10 @@ class StudyProgram extends Model
     use HasFactory;
     protected $fillable = [
         'name', 
-        'university', 
-        'category', 
+        'weight_num',
+        'weight_abst',
+        'weight_verb',
         'passing_grade_avg', 
-        'description', 
-        'prospect'
     ];
 
 

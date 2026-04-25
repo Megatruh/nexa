@@ -9,4 +9,14 @@ class Survey extends Model
 {
     /** @use HasFactory<\Database\Factories\SurveyFactory> */
     use HasFactory;
+    protected $fillable = [
+        'category',
+        'question',
+        'option_a',
+        'option_b',
+        'option_c',
+        'option_d',
+        'correct_answer',
+        'item_weight',
+    ];
 }

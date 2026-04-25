@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class StudyProgramFactory extends Factory
 {
+    private static $majorIndex = 0;
+
     /**
      * Define the model's default state.
      *
@@ -17,16 +19,16 @@ class StudyProgramFactory extends Factory
     public function definition(): array
     {
         $majors = require database_path('data/majors.php');
-        $universities = require database_path('data/universities.php');
-        $categories = ['Saintek', 'Soshum'];
+
+        $major = $majors[self::$majorIndex % count($majors)];
+        self::$majorIndex++;
 
         return [
-            'name'=> $this->faker->randomElement($majors),
-            'university' => $this->faker->randomElement($universities),
-            'category'=>$this->faker->randomElement($categories),
+            'name' => $major,
+            'weight_num'=>$this->faker->numberBetween(1,5),
+            'weight_abst'=>$this->faker->numberBetween(1,5),
+            'weight_verb'=>$this->faker->numberBetween(1,5),
             'passing_grade_avg'=>$this->faker->numberBetween(500,850),
-            'description'=>$this->faker->paragraph(),
-            'prospect'=>$this->faker->sentence(rand(1,2), true)
         ];
     }
 }

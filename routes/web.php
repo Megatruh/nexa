@@ -1,5 +1,6 @@
 <?php
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\TryoutController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SubtestController;
@@ -55,9 +56,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
         })->name('jurusan.index');
         
         //5. tryout
-        Route::get('/tryout', function(){
-            return Inertia::render('Tryout/Index');
-        })->name('tryout.index');
+        Route::prefix('tryout')->name('tryout.')->group(function () {
+            Route::get('/', [TryoutController::class, 'index'])->name('index');
+            Route::get('/{tryout_id}/subtest/{subtest_id}', [TryoutController::class, 'showSubtest'])->name('subtest.show');
+            Route::post('/answer', [TryoutController::class, 'storeAnswer'])->name('answer.store');
+            Route::post('/{tryout_session_id}/finish', [TryoutController::class, 'finishSubtest'])->name('subtest.finish');
+        });
     });
 });
 

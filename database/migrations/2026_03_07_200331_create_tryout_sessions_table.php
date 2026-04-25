@@ -19,9 +19,13 @@ return new class extends Migration
             $table->dateTime('finished_at')->nullable();
             $table->integer('total_score')->nullable();
             $table->json('score_details')->nullable();
+            // Tambahkan baris ini di dalam schema tryout_sessions:
+            $table->foreignId('tryout_id')->constrained('tryouts');
             $table->timestamps();
         });
     }
+
+    
 
     /**
      * Reverse the migrations.

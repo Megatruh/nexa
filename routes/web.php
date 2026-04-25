@@ -4,6 +4,7 @@ use App\Http\Controllers\TryoutController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SubtestController;
+use App\Http\Controllers\SurveyTestController;
 use Inertia\Inertia;
 
 // ==========================================
@@ -51,9 +52,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     // ==========================================
     Route::middleware(['user'])->group(function(){
         // kesesuaian jurusan
-        Route::get('/jurusan', function(){
-            return Inertia::render('Jurusan/Index');
-        })->name('jurusan.index');
+        Route::get('/jurusan', [SurveyTestController::class, 'index'])->name('jurusan.index');
+        Route::get('/jurusan/test', [SurveyTestController::class, 'showTest'])->name('jurusan.test');
+        Route::post('/jurusan/test', [SurveyTestController::class, 'submit'])->name('jurusan.test.submit');
         
         //5. tryout
         Route::prefix('tryout')->name('tryout.')->group(function () {

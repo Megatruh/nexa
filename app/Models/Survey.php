@@ -19,4 +19,9 @@ class Survey extends Model
         'correct_answer',
         'item_weight',
     ];
+
+    // relasi dengan model user_survey_responses(jawaban user)
+    public function responses(){
+        return $this->hasMany(UserSurveyResponse::class);
+    }
 }

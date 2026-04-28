@@ -14,6 +14,7 @@ return new class extends Migration
             // Sekarang ini akan otomatis mengarah ke tabel 'tryout_subtests' yang benar
             $table->foreignId('tryout_subtest_id')->constrained()->cascadeOnDelete();
             $table->longText('question_text');
+            $table->string('question_image')->nullable();
             $table->text('option_a');
             $table->text('option_b');
             $table->text('option_c');

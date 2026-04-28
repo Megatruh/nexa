@@ -10,11 +10,11 @@ return new class extends Migration
      * Run the migrations.
      */
     public function up(): void
-    {
-        Schema::create('table_tryout_session_subtests', function (Blueprint $table) {
+{
+        Schema::create('tryout_session_subtests', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tryout_session_id')->constrained()->cascadeOnDelete();
-            // $table->foreignId('tryout_subtest_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('tryout_subtest_id')->constrained()->cascadeOnDelete();
             $table->dateTime('started_at');
             $table->dateTime('finished_at')->nullable(); // Terisi saat user klik "Selesai Subtes" atau waktu habis
             $table->timestamps();
@@ -26,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('table_tryout_session_subtests');
+        Schema::dropIfExists('tryout_session_subtests');
     }
 };

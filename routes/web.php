@@ -61,7 +61,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/', [TryoutController::class, 'index'])->name('index');
             Route::get('/{tryout_id}/subtest/{subtest_id}', [TryoutController::class, 'showSubtest'])->name('subtest.show');
             Route::post('/answer', [TryoutController::class, 'storeAnswer'])->name('answer.store');
-            Route::post('/{tryout_session_id}/finish', [TryoutController::class, 'finishSubtest'])->name('subtest.finish');
+            Route::post('/subtest-finish/{session_subtest_id}', [TryoutController::class, 'finishSubtest'])->name('subtest.finish');
         });
     });
 });

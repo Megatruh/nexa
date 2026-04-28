@@ -17,23 +17,29 @@ class TryoutController extends Controller
      * 1. Halaman Utama Tryout (Daftar & Riwayat)
      */
     public function index()
-    {
-        $user = Auth::user();
-        
-        // Ambil tryout yang sedang aktif
-        $activeTryouts = Tryout::where('is_active', true)->get();
-        
-        // Ambil riwayat pengerjaan tryout user
-        $history = TryoutSession::with('tryout')
-            ->where('user_id', $user->id)
-            ->orderBy('created_at', 'desc')
-            ->get();
+{
+    $user = Auth::user();
+    
+    $activeTryouts = Tryout::where('is_active', true)
+        ->withCount('subtests') // Biar muncul "7 Subtest" di UI
+        ->get()
+        ->map(function ($tryout) {
+            // Kita cari subtest pertama berdasarkan urutan (order)
+            $firstSubtest = $tryout->subtests()->orderBy('order', 'asc')->first();
+            $tryout->first_subtest_id = $firstSubtest ? $firstSubtest->id : null;
+            return $tryout;
+        });
+    
+    $history = TryoutSession::with('tryout')
+        ->where('user_id', $user->id)
+        ->orderBy('created_at', 'desc')
+        ->get();
 
-        return Inertia::render('Tryout/Index', [
-            'activeTryouts' => $activeTryouts,
-            'history' => $history
-        ]);
-    }
+    return Inertia::render('Tryout/Index', [
+        'activeTryouts' => $activeTryouts,
+        'history' => $history
+    ]);
+}
 
     /**
      * 2. Menampilkan Halaman Ujian (1 Soal 1 Halaman)
@@ -54,7 +60,7 @@ class TryoutController extends Controller
         $sessionSubtest = TryoutSessionSubtest::firstOrCreate(
             ['tryout_session_id' => $session->id, 'tryout_subtest_id' => $subtest->id],
             ['started_at' => now()]
-        );
+        ); // Ambil data lengkap setelah firstOrCreate
 
         // Jika subtes sudah selesai, lempar ke subtes berikutnya atau halaman hasil
         if ($sessionSubtest->finished_at) {
@@ -83,8 +89,31 @@ class TryoutController extends Controller
         ]);
     }
 
+    public function finishSubtest(Request $request, $session_subtest_id)
+{
+    $sessionSubtest = TryoutSessionSubtest::findOrFail($session_subtest_id);
+    $sessionSubtest->update(['finished_at' => now()]);
+
+    $currentSubtest = TryoutSubtest::find($sessionSubtest->tryout_subtest_id);
+
+    // Cari yang ordernya lebih besar
+    $nextSubtest = TryoutSubtest::where('tryout_id', $currentSubtest->tryout_id)
+        ->where('order', '>', $currentSubtest->order)
+        ->orderBy('order', 'asc')
+        ->first();
+
+    if ($nextSubtest) {
+        return redirect()->route('tryout.subtest.show', [
+            'tryout_id' => $currentSubtest->tryout_id,
+            'subtest_id' => $nextSubtest->id
+        ]);
+    }
+
+    return redirect()->route('tryout.index')->with('success', 'Semua subtest selesai!');
+}
+
     /**
-     * 3. Menyimpan Jawaban (Auto-save) saat user klik A, B, C, D, E atau Next
+     * 3. Menyimpan Jawaban (Auto-save)
      */
     public function storeAnswer(Request $request)
     {
@@ -95,7 +124,6 @@ class TryoutController extends Controller
             'is_doubtful' => 'boolean'
         ]);
 
-        // Simpan atau update jawaban
         TryoutAnswer::updateOrCreate(
             [
                 'tryout_session_id' => $request->tryout_session_id,
@@ -107,26 +135,7 @@ class TryoutController extends Controller
             ]
         );
 
-        // Gunakan back() agar Inertia tetap di halaman yang sama tanpa reload full
         return back(); 
     }
-
-    /**
-     * 4. Menyelesaikan Subtes (Skip Waktu / Habis Waktu)
-     */
-    public function finishSubtest(Request $request, $session_subtest_id)
-    {
-        $sessionSubtest = TryoutSessionSubtest::findOrFail($session_subtest_id);
-        
-        // Tandai waktu selesai
-        $sessionSubtest->update([
-            'finished_at' => now()
-        ]);
-
-        // LOGIKA LANJUTAN: 
-        // Cek apakah ini subtes terakhir. Jika ya, hitung total skor di sini dan update `tryout_sessions`.
-        // Jika bukan, redirect ke subtes berikutnya.
-
-        return redirect()->route('tryout.index')->with('success', 'Subtes selesai!');
-    }
 }
+

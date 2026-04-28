@@ -11,12 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('table_tryout_answers', function (Blueprint $table) {
+        Schema::create('tryout_answers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('tryout_session_id')->constrained()->cascadeOnDelete();
             $table->foreignId('tryout_question_id')->constrained()->cascadeOnDelete();
             $table->char('answer', 1)->nullable(); // Jawaban user ('A', 'B', dll)
-            $table->boolean('is_doubtful')->default(false); // Fitur ragu-ragu
+            //$table->boolean('is_doubtful')->default(false); // Fitur ragu-ragu
             $table->timestamps();
             
             // Mencegah duplikasi jawaban untuk soal yang sama di sesi yang sama

@@ -1,9 +1,46 @@
 import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
-import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage } from '@inertiajs/react';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
+// Import NavLink bawaan Breeze agar bisa dipakai di Navbar
+import NavLink from '@/Components/NavLink';
+import { Footer } from '../Components/Footer';
+
+// Komponen bintang-bintang di background
+function StarField() {
+  const stars = useMemo(() => {
+    return Array.from({ length: 80 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 2 + 0.5,
+      duration: Math.random() * 4 + 2,
+      delay: Math.random() * 4,
+      opacity: Math.random() * 0.6 + 0.2,
+    }));
+  }, []);
+
+  return (
+    <div className="stars-bg">
+      {stars.map((star) => (
+        <div
+          key={star.id}
+          className="star"
+          style={{
+            left: `${star.x}%`,
+            top: `${star.y}%`,
+            width: `${star.size}px`,
+            height: `${star.size}px`,
+            opacity: star.opacity,
+            "--duration": `${star.duration}s`,
+            "--delay": `${star.delay}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 export default function AuthenticatedLayout({ header, children }) {
     const {auth} = usePage().props;
@@ -13,18 +50,29 @@ export default function AuthenticatedLayout({ header, children }) {
         useState(false);
 
     return (
-        <div className="min-h-screen bg-gray-100">
-            <nav className="border-b border-gray-100 bg-white">
+        <div className="min-h-screen bg-space-gradient pt-24">
+            <StarField/>
+            <nav className="fixed top-4 left-1/2 -translate-x-1/2 w-[95%] max-w-7xl z-50 rounded-2xl border border-white/10 bg-space-dark/60 backdrop-blur-lg shadow-2xl shadow-purple-900/20">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 justify-between">
-                        <div className="flex">
+                        <div className="flex mx-8">
                             <div className="flex shrink-0 items-center">
                                 <Link href={user?.role == 'admin' ? route('admin.dashboard') : route('dashboard')}>
-                                    <ApplicationLogo className="block h-9 w-auto fill-current text-gray-800" />
+                                    {/* <ApplicationLogo className="block h-9 w-auto fill-current text-gray-800" /> */}
+                                    <span
+                                        className="font-display font-bold text-xl tracking-widest"
+                                        style={{
+                                        background: "linear-gradient(135deg, #c4b5fd, #a78bfa)",
+                                        WebkitBackgroundClip: "text",
+                                        WebkitTextFillColor: "transparent",
+                                        }}
+                                    >
+                                        NEXA
+                                    </span>
                                 </Link>
                             </div>
 
-                            <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                            <div className="hidden space-x-4 sm:-my-px sm:ms-10 sm:flex">
                                 <NavLink
                                     href={route('dashboard')}
                                     active={route().current('dashboard')}
@@ -97,7 +145,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <span className="inline-flex rounded-md">
                                             <button
                                                 type="button"
-                                                className="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
+                                                className="inline-flex items-center rounded-md border border-transparent px-3 py-2 text-sm font-medium leading-4 text-gray-200 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none cursor-pointer"
                                             >
                                                 {user.name}
 
@@ -138,7 +186,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 <div className="flex space-x-4">
                                     <Link
                                         href={route('login')}
-                                        className="text-sm font-medium text-gray-500 hover:text-gray-700"
+                                        className="rounded-md px-4 py-2 text-sm my-auto font-medium text-white hover:bg-white/5"
                                     >
                                         Masuk
                                     </Link>
@@ -246,6 +294,8 @@ export default function AuthenticatedLayout({ header, children }) {
             )}
 
             <main>{children}</main>
+            {/* Pasang Footer di sini agar muncul di semua halaman */}
+            <Footer />
         </div>
     );
 }

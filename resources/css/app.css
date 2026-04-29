@@ -2,3 +2,54 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@theme {
+  /* Colors */
+  --color-primary-500: #5b21b6;
+  --color-primary-600: #4c1d95;
+  --color-space-dark: #0d0820;
+  --color-space-mid: #1a1040;
+  --color-space-light: #2d1b69;
+  --color-accent: #a78bfa;
+
+  /* Fonts */
+  --font-display: "Orbitron", sans-serif;
+  --font-body: "Syne", sans-serif;
+
+  /* Gradients - Penting untuk background luar angkasa! */
+  --background-image-space-gradient: linear-gradient(135deg, #0d0820 0%, #1a1040 40%, #2d1b69 70%, #1a0a3d 100%);
+  --background-image-purple-mesh: radial-gradient(ellipse at 20% 50%, #5b21b6 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, #7c3aed 0%, transparent 50%);
+
+  /* Animations */
+  --animate-float: float 6s ease-in-out infinite;
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
+}
+
+.nexa-bg {
+    background: var(--background-image-space-gradient);
+    position: relative;
+}
+
+.stars-bg {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.star {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    animation: twinkle var(--duration) infinite ease-in-out;
+    animation-delay: var(--delay);
+}
+
+@keyframes twinkle {
+    0%, 100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.2); }
+}

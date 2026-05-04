@@ -45,6 +45,71 @@ function StarField() {
 export default function AuthenticatedLayout({ header, children }) {
     const {auth} = usePage().props;
     const user = auth.user;
+    const isAdmin = user?.role === 'admin';
+
+    const adminNavItems = [
+        {
+            label: 'Dashboard Admin',
+            href: route('admin.dashboard'),
+            active: route().current('admin.dashboard'),
+        },
+        {
+            label: 'Manajemen Tes DAT',
+            href: route('admin.dat-tests.index'),
+            active: route().current('admin.dat-tests.index'),
+        },
+        {
+            label: 'Manajemen Pengguna',
+            href: route('admin.users.index'),
+            active: route().current('admin.users.index'),
+        },
+        {
+            label: 'Manajemen Jurusan',
+            href: route('admin.majors.index'),
+            active: route().current('admin.majors.index'),
+        },
+        {
+            label: 'Manajemen Materi',
+            href: route('admin.study-materials.index'),
+            active: route().current('admin.study-materials.index'),
+        },
+    ];
+
+    const userNavItems = [
+        {
+            label: 'Beranda',
+            href: route('dashboard'),
+            active: route().current('dashboard'),
+        },
+        {
+            label: 'Kesesuaian Jurusan',
+            href: route('jurusan.index'),
+            active: route().current('jurusan.index'),
+        },
+        {
+            label: 'Ulasan Prodi',
+            href: route('prodi.index'),
+            active: route().current('prodi.index'),
+        },
+        {
+            label: 'Belajar',
+            href: route('subtests.index'),
+            active: route().current('subtests.index'),
+        },
+        {
+            label: 'Try Out',
+            href: user ? route('tryout.index') : route('login'),
+            active: route().current('tryout.index'),
+        },
+    ];
+
+    const navigation = isAdmin ? adminNavItems : userNavItems;
+    const mobileNavClass = (active) =>
+        `rounded-xl border border-white/10 border-l-0 px-4 py-2 text-sm font-medium transition ${
+            active
+                ? 'bg-space-mid/60 text-white border-purple-400'
+                : 'text-white/70 hover:text-white hover:border-purple-300 hover:bg-white/5'
+        }`;
 
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
         useState(false);
@@ -57,7 +122,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     <div className="flex h-16 justify-between">
                         <div className="flex mx-8">
                             <div className="flex shrink-0 items-center">
-                                <Link href={user?.role == 'admin' ? route('admin.dashboard') : route('dashboard')}>
+                                <Link href={isAdmin ? route('admin.dashboard') : route('dashboard')}>
                                     {/* <ApplicationLogo className="block h-9 w-auto fill-current text-gray-800" /> */}
                                     <span
                                         className="font-display font-bold text-xl tracking-widest"
@@ -73,67 +138,15 @@ export default function AuthenticatedLayout({ header, children }) {
                             </div>
 
                             <div className="hidden space-x-4 sm:-my-px sm:ms-10 sm:flex">
-                                <NavLink
-                                    href={route('dashboard')}
-                                    active={route().current('dashboard')}
-                                >
-                                    Beranda
-                                </NavLink>
-                                {/* Navbar Admin */}
-                                {user?.role == 'admin' && (
-                                    <>
-                                        <NavLink
-                                            // href='#'
-                                            // active={false}
-                                            href={route('admin.dat-tests.index')}
-                                            active={route().current('admin.dat-tests.index')}
-                                        >
-                                            Kelola Soal
-                                        </NavLink>
-
-                                        <NavLink
-                                            // href='#'
-                                            // active={false}
-                                            href={route('admin.users.index')}
-                                            active={route().current('admin.users.index')}
-                                        >
-                                            Kelola Pengguna
-                                        </NavLink>
-                                    </>
-                                )}
-
-                                {/* Navbar User/Guest */}
-                                {user?.role != 'admin' && (
-                                    <>
-                                        <NavLink
-                                            href={route('jurusan.index')}
-                                            active={route().current('jurusan.index')}
-                                        >
-                                            Kesesuaian Jurusan
-                                        </NavLink>
-
-                                        <NavLink
-                                            href={route('prodi.index')}
-                                            active={route().current('prodi.index')}
-                                        >
-                                            Ulasasn Prodi
-                                        </NavLink>
-
-                                        <NavLink
-                                            href={route('subtests.index')}
-                                            active={route().current('subtests.index')}
-                                        >
-                                            Belajar
-                                        </NavLink>
-
-                                        <NavLink 
-                                            href={auth.user ? route('tryout.index') : route('login')}
-                                            active={route().current('tryout.index')}
-                                        >
-                                            Tryout {/* Belum dibuat */}
-                                        </NavLink>
-                                    </>
-                                )}
+                                {navigation.map((item) => (
+                                    <NavLink
+                                        key={item.label}
+                                        href={item.href}
+                                        active={item.active}
+                                    >
+                                        {item.label}
+                                    </NavLink>
+                                ))}
                             </div>
                         </div>
 
@@ -251,12 +264,16 @@ export default function AuthenticatedLayout({ header, children }) {
                     }
                 >
                     <div className="space-y-1 pb-3 pt-2">
-                        <ResponsiveNavLink
-                            href={route('dashboard')}
-                            active={route().current('dashboard')}
-                        >
-                            Dashboard
-                        </ResponsiveNavLink>
+                        {navigation.map((item) => (
+                            <ResponsiveNavLink
+                                key={item.label}
+                                href={item.href}
+                                active={item.active}
+                                className={mobileNavClass(item.active)}
+                            >
+                                {item.label}
+                            </ResponsiveNavLink>
+                        ))}
                     </div>
 
                     <div className="border-t border-gray-200 pb-1 pt-4">

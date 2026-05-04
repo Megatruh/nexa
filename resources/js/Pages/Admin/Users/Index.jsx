@@ -4,7 +4,11 @@ import { Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 export default function UsersIndex() {
-    const users = usePage().props.users ?? [];
+    const { users, filters } = usePage().props;
+    const userList = users?.data ?? [];
+    const paginationLinks = users?.links ?? [];
+    const sort = filters?.sort ?? 'created_at';
+    const direction = filters?.direction ?? 'desc';
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
 
@@ -37,6 +41,22 @@ export default function UsersIndex() {
         if (confirm('Hapus pengguna ini? Tindakan tidak dapat dibatalkan.')) {
             router.delete(route('admin.users.destroy', id));
         }
+    };
+
+    const handleSort = (key) => {
+        const nextDirection =
+            sort === key && direction === 'asc' ? 'desc' : 'asc';
+
+        router.get(
+            route('admin.users.index'),
+            { sort: key, direction: nextDirection },
+            { preserveState: true, replace: true }
+        );
+    };
+
+    const sortIndicator = (key) => {
+        if (sort !== key) return '';
+        return direction === 'asc' ? '↑' : '↓';
     };
 
     const formatDate = (date) => {
@@ -75,15 +95,50 @@ export default function UsersIndex() {
                         <table className="min-w-full divide-y divide-white/10 text-sm text-white">
                             <thead className="bg-space-dark/60 text-xs uppercase tracking-widest text-white/70">
                                 <tr>
-                                    <th className="px-6 py-4 text-left">Nama</th>
+                                    <th className="px-6 py-4 text-left">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSort('name')}
+                                            className="inline-flex items-center gap-2 text-left"
+                                        >
+                                            Nama
+                                            <span className="text-indigo-200/70">
+                                                {sortIndicator('name')}
+                                            </span>
+                                        </button>
+                                    </th>
                                     <th className="px-6 py-4 text-left">Email</th>
-                                    <th className="px-6 py-4 text-left">Role</th>
-                                    <th className="px-6 py-4 text-left">Tanggal Bergabung</th>
+                                    <th className="px-6 py-4 text-left">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSort('role')}
+                                            className="inline-flex items-center gap-2 text-left"
+                                        >
+                                            Role
+                                            <span className="text-indigo-200/70">
+                                                {sortIndicator('role')}
+                                            </span>
+                                        </button>
+                                    </th>
+                                    <th className="px-6 py-4 text-left">
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                handleSort('created_at')
+                                            }
+                                            className="inline-flex items-center gap-2 text-left"
+                                        >
+                                            Tanggal Bergabung
+                                            <span className="text-indigo-200/70">
+                                                {sortIndicator('created_at')}
+                                            </span>
+                                        </button>
+                                    </th>
                                     <th className="px-6 py-4 text-left">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
-                                {users.length === 0 && (
+                                {userList.length === 0 && (
                                     <tr>
                                         <td
                                             colSpan={5}
@@ -93,7 +148,7 @@ export default function UsersIndex() {
                                         </td>
                                     </tr>
                                 )}
-                                {users.map((user) => (
+                                {userList.map((user) => (
                                     <tr key={user.id} className="hover:bg-white/5">
                                         <td className="px-6 py-4 text-white/90">
                                             {user.name}
@@ -137,6 +192,35 @@ export default function UsersIndex() {
                         </table>
                     </div>
                 </div>
+
+                {paginationLinks.length > 3 && (
+                    <div className="mt-6 flex flex-wrap justify-center gap-2">
+                        {paginationLinks.map((link, index) =>
+                            link.url ? (
+                                <Link
+                                    key={index}
+                                    href={link.url}
+                                    className={`px-4 py-2 rounded-xl border text-sm transition-all ${
+                                        link.active
+                                            ? 'bg-purple-600/80 text-white border-purple-500 shadow-[0_0_15px_rgba(147,51,234,0.4)]'
+                                            : 'bg-space-mid/40 text-purple-300 border-white/10 hover:bg-space-light/50 hover:border-purple-400/50'
+                                    }`}
+                                    dangerouslySetInnerHTML={{
+                                        __html: link.label,
+                                    }}
+                                />
+                            ) : (
+                                <span
+                                    key={index}
+                                    className="px-4 py-2 rounded-xl border bg-space-dark/50 border-white/5 text-gray-600 cursor-not-allowed text-sm"
+                                    dangerouslySetInnerHTML={{
+                                        __html: link.label,
+                                    }}
+                                />
+                            )
+                        )}
+                    </div>
+                )}
             </div>
 
             {isModalOpen && (

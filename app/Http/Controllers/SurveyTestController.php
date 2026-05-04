@@ -17,7 +17,7 @@ class SurveyTestController extends Controller
         $user = Auth::user();
         
         // 1. Cek apakah user sudah punya jawaban di database
-        $hasResponses = UserSurveyResponse::where('user_id', $user->id)->exists();
+        $hasResponses = UserSurveyResponse::query()->where('user_id', $user->id)->exists();
         $latestResults = null;
 
         if ($hasResponses) {
@@ -29,7 +29,7 @@ class SurveyTestController extends Controller
                 'Abstrak' => Survey::query()->where('category', 'Abstrak')->sum('item_weight'),
             ];
 
-            $userResponses = UserSurveyResponse::where('user_id', $user->id)
+            $userResponses = UserSurveyResponse::query()->where('user_id', $user->id)
                 ->with('survey')
                 ->get();
 
@@ -56,7 +56,7 @@ class SurveyTestController extends Controller
     public function showTest()
     {
         // Mengambil soal untuk ditampilkan di Jurusan/Test.jsx
-        $questions = Survey::whereIn('category', ['Numerik', 'Verbal', 'Abstrak'])->get();
+        $questions = Survey::query()->whereIn('category', ['Numerik', 'Verbal', 'Abstrak'])->get();
         
         return Inertia::render('Jurusan/Test', [
             'questions' => $questions,

@@ -4,7 +4,11 @@ import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 
 export default function DatTestIndex() {
-    const questions = usePage().props.questions ?? [];
+    const { questions, filters } = usePage().props;
+    const questionList = questions?.data ?? [];
+    const paginationLinks = questions?.links ?? [];
+    const sort = filters?.sort ?? 'category';
+    const direction = filters?.direction ?? 'asc';
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingQuestion, setEditingQuestion] = useState(null);
 
@@ -63,6 +67,22 @@ export default function DatTestIndex() {
         }
     };
 
+    const handleSort = (key) => {
+        const nextDirection =
+            sort === key && direction === 'asc' ? 'desc' : 'asc';
+
+        router.get(
+            route('admin.dat-tests.index'),
+            { sort: key, direction: nextDirection },
+            { preserveState: true, replace: true }
+        );
+    };
+
+    const sortIndicator = (key) => {
+        if (sort !== key) return '';
+        return direction === 'asc' ? '↑' : '↓';
+    };
+
     return (
         <AuthenticatedLayout>
             <Head title="Manajemen Tes DAT" />
@@ -97,17 +117,39 @@ export default function DatTestIndex() {
                         <table className="min-w-full divide-y divide-white/10 text-sm text-white">
                             <thead className="bg-space-dark/60 text-xs uppercase tracking-widest text-white/70">
                                 <tr>
-                                    <th className="px-6 py-4 text-left">Soal</th>
+                                    <th className="px-6 py-4 text-left">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSort('question')}
+                                            className="inline-flex items-center gap-2 text-left"
+                                        >
+                                            Soal
+                                            <span className="text-indigo-200/70">
+                                                {sortIndicator('question')}
+                                            </span>
+                                        </button>
+                                    </th>
                                     <th className="px-6 py-4 text-left">Opsi A</th>
                                     <th className="px-6 py-4 text-left">Opsi B</th>
                                     <th className="px-6 py-4 text-left">Opsi C</th>
                                     <th className="px-6 py-4 text-left">Opsi D</th>
-                                    <th className="px-6 py-4 text-left">Kategori</th>
+                                    <th className="px-6 py-4 text-left">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleSort('category')}
+                                            className="inline-flex items-center gap-2 text-left"
+                                        >
+                                            Kategori
+                                            <span className="text-indigo-200/70">
+                                                {sortIndicator('category')}
+                                            </span>
+                                        </button>
+                                    </th>
                                     <th className="px-6 py-4 text-left">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-white/5">
-                                {questions.length === 0 && (
+                                {questionList.length === 0 && (
                                     <tr>
                                         <td
                                             colSpan={7}
@@ -117,7 +159,7 @@ export default function DatTestIndex() {
                                         </td>
                                     </tr>
                                 )}
-                                {questions.map((question) => (
+                                {questionList.map((question) => (
                                     <tr key={question.id} className="hover:bg-white/5">
                                         <td className="px-6 py-4 text-white/90">
                                             {question.question}
@@ -165,6 +207,35 @@ export default function DatTestIndex() {
                         </table>
                     </div>
                 </div>
+
+                {paginationLinks.length > 3 && (
+                    <div className="mt-6 flex flex-wrap justify-center gap-2">
+                        {paginationLinks.map((link, index) =>
+                            link.url ? (
+                                <Link
+                                    key={index}
+                                    href={link.url}
+                                    className={`px-4 py-2 rounded-xl border text-sm transition-all ${
+                                        link.active
+                                            ? 'bg-purple-600/80 text-white border-purple-500 shadow-[0_0_15px_rgba(147,51,234,0.4)]'
+                                            : 'bg-space-mid/40 text-purple-300 border-white/10 hover:bg-space-light/50 hover:border-purple-400/50'
+                                    }`}
+                                    dangerouslySetInnerHTML={{
+                                        __html: link.label,
+                                    }}
+                                />
+                            ) : (
+                                <span
+                                    key={index}
+                                    className="px-4 py-2 rounded-xl border bg-space-dark/50 border-white/5 text-gray-600 cursor-not-allowed text-sm"
+                                    dangerouslySetInnerHTML={{
+                                        __html: link.label,
+                                    }}
+                                />
+                            )
+                        )}
+                    </div>
+                )}
             </div>
 
             {isModalOpen && (

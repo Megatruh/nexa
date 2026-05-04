@@ -1,13 +1,13 @@
 <?php
 use App\Http\Controllers\AdminController;
-Use App\Http\Controllers\ProdiController;
+use App\Http\Controllers\ProdiController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\SubtestController;
+use App\Http\Controllers\SurveyTestController;
 use App\Http\Controllers\TryoutController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\SubtestController;
-use App\Http\Controllers\SurveyTestController;
 use Inertia\Inertia;
 
 // ==========================================
@@ -77,14 +77,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Route::put('/tryouts/{tryout}', [AdminController::class, 'tryoutsUpdate'])->name('tryouts.update');
         // Route::delete('/tryouts/{tryout}', [AdminController::class, 'tryoutsDestroy'])->name('tryouts.destroy');
 
-        // TODO: Fitur Belum Selesai (Under Construction) - Manajemen Data Jurusan
-        // Route::get('/majors', [AdminController::class, 'majorsIndex'])->name('majors.index');
-        // Route::post('/majors', [AdminController::class, 'majorsStore'])->name('majors.store');
-        // Route::put('/majors/{major}', [AdminController::class, 'majorsUpdate'])->name('majors.update');
-        // Route::delete('/majors/{major}', [AdminController::class, 'majorsDestroy'])->name('majors.destroy');
+        // Manajemen Data Jurusan
+        Route::get('/majors', [AdminController::class, 'majorsIndex'])->name('majors.index');
+        Route::post('/majors', [AdminController::class, 'majorsStore'])->name('majors.store');
+        Route::put('/majors/{major}', [AdminController::class, 'majorsUpdate'])->name('majors.update');
+        Route::delete('/majors/{major}', [AdminController::class, 'majorsDestroy'])->name('majors.destroy');
 
-        // TODO: Fitur Belum Selesai (Under Construction) - Manajemen Materi Belajar
-        // Route::get('/study-materials', [AdminController::class, 'studyMaterialsIndex'])->name('study-materials.index');
+        // Manajemen Materi Belajar
+        Route::get('/study-materials', [AdminController::class, 'studyMaterialsIndex'])->name('study-materials.index');
         // Route::post('/study-materials', [AdminController::class, 'studyMaterialsStore'])->name('study-materials.store');
         // Route::put('/study-materials/{material}', [AdminController::class, 'studyMaterialsUpdate'])->name('study-materials.update');
         // Route::delete('/study-materials/{material}', [AdminController::class, 'studyMaterialsDestroy'])->name('study-materials.destroy');

@@ -64,7 +64,7 @@ class StudyProgramSeeder extends Seeder
                     'weight_num' => $item['weight_num'],
                     'weight_abst' => $item['weight_abst'],
                     'weight_verb' => $item['weight_verb'],
-                    'passing_grade_avg' => rand(530, 800), // Ini boleh random atau sesuaikan
+                    // 'passing_grade_avg' => rand(530, 800), // Ini boleh random atau sesuaikan
                 ]
             );
         }

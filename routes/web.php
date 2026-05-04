@@ -1,5 +1,6 @@
 <?php
 use App\Http\Controllers\AdminController;
+Use App\Http\Controllers\ProdiController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TryoutController;
 use Illuminate\Foundation\Application;
@@ -26,11 +27,9 @@ Route::get('/', function () {
     ]);
 })->name('dashboard');
 
-// Ulasan Prodi
-Route::get('/prodi', function(){
-    return Inertia::render('Prodi/Index');
-})->name('prodi.index');
-
+// ulasan prodi
+Route::get('/prodi', [ProdiController::class, 'index'])->name('prodi.index');
+Route::get('/prodi/{id}', [ProdiController::class, 'show'])->name('prodi.show');
 // Belajar
 Route::get('/subtests', [SubtestController::class, 'index'])->name('subtests.index');
 
@@ -48,6 +47,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/jurusan', [SurveyTestController::class, 'index'])->name('jurusan.index');
         Route::get('/jurusan/test', [SurveyTestController::class, 'showTest'])->name('jurusan.test');
         Route::post('/jurusan/test', [SurveyTestController::class, 'submit'])->name('jurusan.test.submit');
+        
         
         //5. tryout
         Route::prefix('tryout')->name('tryout.')->group(function () {

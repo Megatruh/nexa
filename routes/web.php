@@ -1,7 +1,9 @@
 <?php
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TryoutController;
 use Illuminate\Foundation\Application;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\SubtestController;
 use App\Http\Controllers\SurveyTestController;
@@ -12,6 +14,10 @@ use Inertia\Inertia;
 // ==========================================
 //dashboard
 Route::get('/', function () {
+    if (Auth::check() && Auth::user()->role === 'admin') {
+        return redirect()->route('admin.dashboard');
+    }
+
     return Inertia::render('Dashboard', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
@@ -28,25 +34,12 @@ Route::get('/prodi', function(){
 // Belajar
 Route::get('/subtests', [SubtestController::class, 'index'])->name('subtests.index');
 
+// ==========================================
+// RUTE Admin (BISA DIAKSES KHUSUS ADMIN)
+// ==========================================
+
+
 Route::middleware(['auth', 'verified'])->group(function () {
-    // ==========================================
-    // RUTE Admin (BISA DIAKSES KHUSUS ADMIN)
-    // ==========================================
-    Route::middleware(['admin'])->group(function(){
-        //dashboard admin
-        Route::get('/admin/dashboard', function(){
-            return Inertia::render('Admin/Dashboard');
-        })->name('admin.dashboard');
-
-        Route::get('/admin/kelola-soal', function () {
-            return Inertia::render('Admin/KelolaSoal'); // Pastikan file JSX-nya nanti dibuat
-        })->name('manage.questions');
-
-        Route::get('/admin/kelola-pengguna', function () {
-            return Inertia::render('Admin/KelolaPengguna'); // Pastikan file JSX-nya nanti dibuat
-        })->name('manage.users');
-    });
-
     // ==========================================
     // RUTE USER (BISA DIAKSES KHUSUS USER)
     // ==========================================
@@ -63,6 +56,38 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/answer', [TryoutController::class, 'storeAnswer'])->name('answer.store');
             Route::post('/subtest-finish/{session_subtest_id}', [TryoutController::class, 'finishSubtest'])->name('subtest.finish');
         });
+    });
+    Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function () {
+        Route::get('/', [AdminController::class, 'dashboard'])->name('dashboard');
+
+        // Manajemen Tes DAT
+        Route::get('/dat-tests', [AdminController::class, 'datTestsIndex'])->name('dat-tests.index');
+        Route::post('/dat-tests', [AdminController::class, 'datTestsStore'])->name('dat-tests.store');
+        Route::put('/dat-tests/{dat_test}', [AdminController::class, 'datTestsUpdate'])->name('dat-tests.update');
+        Route::delete('/dat-tests/{dat_test}', [AdminController::class, 'datTestsDestroy'])->name('dat-tests.destroy');
+
+        // Manajemen Pengguna
+        Route::get('/users', [AdminController::class, 'usersIndex'])->name('users.index');
+        Route::put('/users/{user}', [AdminController::class, 'usersUpdateRole'])->name('users.update-role');
+        Route::delete('/users/{user}', [AdminController::class, 'usersDestroy'])->name('users.destroy');
+
+        // TODO: Fitur Belum Selesai (Under Construction) - Manajemen Tryout
+        // Route::get('/tryouts', [AdminController::class, 'tryoutsIndex'])->name('tryouts.index');
+        // Route::post('/tryouts', [AdminController::class, 'tryoutsStore'])->name('tryouts.store');
+        // Route::put('/tryouts/{tryout}', [AdminController::class, 'tryoutsUpdate'])->name('tryouts.update');
+        // Route::delete('/tryouts/{tryout}', [AdminController::class, 'tryoutsDestroy'])->name('tryouts.destroy');
+
+        // TODO: Fitur Belum Selesai (Under Construction) - Manajemen Data Jurusan
+        // Route::get('/majors', [AdminController::class, 'majorsIndex'])->name('majors.index');
+        // Route::post('/majors', [AdminController::class, 'majorsStore'])->name('majors.store');
+        // Route::put('/majors/{major}', [AdminController::class, 'majorsUpdate'])->name('majors.update');
+        // Route::delete('/majors/{major}', [AdminController::class, 'majorsDestroy'])->name('majors.destroy');
+
+        // TODO: Fitur Belum Selesai (Under Construction) - Manajemen Materi Belajar
+        // Route::get('/study-materials', [AdminController::class, 'studyMaterialsIndex'])->name('study-materials.index');
+        // Route::post('/study-materials', [AdminController::class, 'studyMaterialsStore'])->name('study-materials.store');
+        // Route::put('/study-materials/{material}', [AdminController::class, 'studyMaterialsUpdate'])->name('study-materials.update');
+        // Route::delete('/study-materials/{material}', [AdminController::class, 'studyMaterialsDestroy'])->name('study-materials.destroy');
     });
 });
 

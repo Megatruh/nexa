@@ -85,8 +85,8 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <NavLink
                                             // href='#'
                                             // active={false}
-                                            href={route('manage.questions')}
-                                            active={route().current('manage.questions')}
+                                            href={route('admin.dat-tests.index')}
+                                            active={route().current('admin.dat-tests.index')}
                                         >
                                             Kelola Soal
                                         </NavLink>
@@ -94,8 +94,8 @@ export default function AuthenticatedLayout({ header, children }) {
                                         <NavLink
                                             // href='#'
                                             // active={false}
-                                            href={route('manage.users')}
-                                            active={route().current('manage.users')}
+                                            href={route('admin.users.index')}
+                                            active={route().current('admin.users.index')}
                                         >
                                             Kelola Pengguna
                                         </NavLink>

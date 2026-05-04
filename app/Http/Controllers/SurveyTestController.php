@@ -24,9 +24,9 @@ class SurveyTestController extends Controller
             // 2. Hitung skor dari data yang ada di database
             $scores = ['Numerik' => 0, 'Verbal' => 0, 'Abstrak' => 0];
             $maxScores = [
-                'Numerik' => Survey::where('category', 'Numerik')->sum('item_weight'),
-                'Verbal'  => Survey::where('category', 'Verbal')->sum('item_weight'),
-                'Abstrak' => Survey::where('category', 'Abstrak')->sum('item_weight'),
+                'Numerik' => Survey::query()->where('category', 'Numerik')->sum('item_weight'),
+                'Verbal'  => Survey::query()->where('category', 'Verbal')->sum('item_weight'),
+                'Abstrak' => Survey::query()->where('category', 'Abstrak')->sum('item_weight'),
             ];
 
             $userResponses = UserSurveyResponse::where('user_id', $user->id)
@@ -69,7 +69,7 @@ class SurveyTestController extends Controller
         $user = Auth::user();
     
         // Hapus jawaban lama agar hasil selalu yang terbaru (Otomatis Update)
-        UserSurveyResponse::where('user_id', $user->id)->delete();
+        UserSurveyResponse::query()->where('user_id', $user->id)->delete();
         
         $answers = $request->answers ?? []; 
         
@@ -77,13 +77,13 @@ class SurveyTestController extends Controller
 
         // Murni ambil dari database (Jangan ditambah lagi di dalam foreach!)
         $maxScores = [
-            'Numerik' => Survey::where('category', 'Numerik')->sum('item_weight'),
-            'Verbal'  => Survey::where('category', 'Verbal')->sum('item_weight'),
-            'Abstrak' => Survey::where('category', 'Abstrak')->sum('item_weight'),
+            'Numerik' => Survey::query()->where('category', 'Numerik')->sum('item_weight'),
+            'Verbal'  => Survey::query()->where('category', 'Verbal')->sum('item_weight'),
+            'Abstrak' => Survey::query()->where('category', 'Abstrak')->sum('item_weight'),
         ];
 
         foreach ($answers as $questionId => $userAnswer) {
-            $question = Survey::find($questionId);
+            $question = Survey::query()->find($questionId);
             
             if(!$question) continue;
 

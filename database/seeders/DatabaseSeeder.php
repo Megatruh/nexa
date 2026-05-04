@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             QuestionSeeder::class,
             SurveySeeder::class,
             TryoutBatch1Seeder::class,
+            StudyProgramDescriptionSeeder::class,
         ]);
 
 

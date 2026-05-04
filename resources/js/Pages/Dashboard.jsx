@@ -19,7 +19,7 @@ const FITUR = [
     icon: Star,
     judul: "Ulasan Prodi",
     deskripsi: "Cari tahu pengalaman mahasiswa di berbagai program studi pilihanmu.",
-    url: 'login',
+    url: 'prodi.index',
     warna: "#818cf8",
   },
   {

@@ -14,7 +14,7 @@ class StudyProgram extends Model
         'weight_num',
         'weight_abst',
         'weight_verb',
-        'passing_grade_avg', 
+        // 'passing_grade_avg', 
     ];
 
 

@@ -7,14 +7,11 @@ import {
     Rocket,
     Users,
     TrendingUp,
-    ArrowRight,
-    Construction,
     Sparkles,
 } from 'lucide-react';
-
-/* ──────────────────────── Animated Counter ──────────────────────── */
 import { useState, useEffect, useRef } from 'react';
 
+/* ───────────────── Animated Counter Hook ───────────────── */
 function useCountUp(target, duration = 1200) {
     const [count, setCount] = useState(0);
     const hasRun = useRef(false);
@@ -32,7 +29,6 @@ function useCountUp(target, duration = 1200) {
                     const step = (now) => {
                         const elapsed = now - start;
                         const progress = Math.min(elapsed / duration, 1);
-                        // easeOutExpo
                         const ease = 1 - Math.pow(2, -10 * progress);
                         setCount(Math.floor(ease * target));
                         if (progress < 1) requestAnimationFrame(step);
@@ -49,139 +45,70 @@ function useCountUp(target, duration = 1200) {
     return { count, ref };
 }
 
-/* ──────────────────────── Stat Card ──────────────────────── */
-function StatCard({ icon: Icon, label, value, accent = '#a78bfa' }) {
+/* ───────────────── Quick Stat Card (Tier 1) ───────────────── */
+function QuickStatCard({ icon: Icon, label, value }) {
     const { count, ref } = useCountUp(value);
+
     return (
         <div
             ref={ref}
-            className="relative overflow-hidden rounded-2xl p-5 transition-transform duration-300 hover:scale-[1.03]"
-            style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                backdropFilter: 'blur(16px)',
-            }}
+            className="flex items-center gap-4 rounded-2xl border border-white/5 bg-space-mid/40 p-4 transition-all duration-300 hover:border-purple-500/20 hover:bg-space-mid/60"
         >
-            {/* glow blob */}
-            <div
-                className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full blur-3xl"
-                style={{ background: accent, opacity: 0.12 }}
-            />
-
-            <div className="flex items-center gap-3">
-                <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-                    style={{ background: `${accent}22`, border: `1px solid ${accent}33` }}
-                >
-                    <Icon className="h-5 w-5" style={{ color: accent }} />
-                </div>
-                <div>
-                    <p className="text-xs font-medium" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                        {label}
-                    </p>
-                    <p className="text-2xl font-bold tabular-nums text-white">
-                        {count.toLocaleString('id-ID')}
-                    </p>
-                </div>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-purple-500/20">
+                <Icon className="h-5 w-5 text-purple-400" />
+            </div>
+            <div className="min-w-0">
+                <p className="truncate text-xs font-medium text-white/50">{label}</p>
+                <p className="text-2xl font-bold tabular-nums text-white">
+                    {count.toLocaleString('id-ID')}
+                </p>
             </div>
         </div>
     );
 }
 
-/* ──────────────────── Management Card ──────────────────── */
-function ManagementCard({ icon: Icon, title, description, statValue, statLabel, href, comingSoon, accent = '#818cf8' }) {
+/* ───────────────── Management Card (Tier 2) ───────────────── */
+function ManagementCard({ icon: Icon, title, description, statValue, statLabel, href }) {
     const { count, ref } = useCountUp(statValue ?? 0);
-    const Wrapper = comingSoon ? 'div' : Link;
-    const wrapperProps = comingSoon ? {} : { href };
 
     return (
         <div ref={ref}>
-        <Wrapper
-            {...wrapperProps}
-            className={
-                'group relative flex flex-col overflow-hidden rounded-3xl p-6 text-white transition-all duration-300 ' +
-                (comingSoon
-                    ? 'cursor-not-allowed opacity-60 grayscale-[30%]'
-                    : 'hover:scale-[1.02] hover:border-purple-400/40')
-            }
-            style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                backdropFilter: 'blur(20px)',
-            }}
-        >
-            {/* Ambient glow */}
-            <div
-                className="pointer-events-none absolute -right-12 -top-12 h-32 w-32 rounded-full blur-3xl transition-opacity duration-500 group-hover:opacity-30"
-                style={{ background: accent, opacity: 0.1 }}
-            />
+            <Link
+                href={href}
+                className="group relative flex flex-col overflow-hidden rounded-3xl border border-purple-500/10 bg-space-mid/30 p-6 text-white backdrop-blur-md transition-all duration-300 hover:border-purple-500/30 hover:bg-space-mid/50"
+            >
+                {/* Ambient glow */}
+                <div className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full bg-purple-500/10 blur-3xl transition-opacity duration-500 group-hover:opacity-40" />
 
-            {/* Top row */}
-            <div className="flex items-start justify-between">
-                <div
-                    className="flex h-12 w-12 items-center justify-center rounded-2xl transition-colors duration-300"
-                    style={{ background: `${accent}18`, border: `1px solid ${accent}28` }}
-                >
-                    <Icon className="h-6 w-6" style={{ color: accent }} />
+                {/* Icon */}
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-purple-500/20 text-purple-400">
+                    <Icon className="h-6 w-6" />
                 </div>
 
-                {comingSoon && (
-                    <span
-                        className="flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-wider"
-                        style={{
-                            background: 'rgba(234,179,8,0.1)',
-                            border: '1px solid rgba(234,179,8,0.25)',
-                            color: '#fde68a',
-                        }}
-                    >
-                        <Construction className="h-3 w-3" />
-                        Segera Hadir
-                    </span>
-                )}
-            </div>
+                {/* Content */}
+                <div className="mt-4 flex-1">
+                    <h3 className="text-xl font-semibold">{title}</h3>
+                    <p className="mt-1.5 text-sm text-white/50">{description}</p>
+                </div>
 
-            {/* Content */}
-            <div className="mt-5 flex-1">
-                <h2 className="text-lg font-semibold">{title}</h2>
-                <p className="mt-1.5 text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
-                    {description}
-                </p>
-            </div>
-
-            {/* Stat & CTA */}
-            <div className="mt-5 flex items-end justify-between">
-                {statValue !== null && statValue !== undefined ? (
+                {/* Bottom: stat & CTA */}
+                <div className="mt-6 flex items-end justify-between">
                     <div>
-                        <p className="text-3xl font-bold tabular-nums" style={{ color: accent }}>
+                        <p className="text-4xl font-bold tabular-nums text-purple-400">
                             {count.toLocaleString('id-ID')}
                         </p>
-                        <p className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                            {statLabel}
-                        </p>
+                        <p className="mt-0.5 text-xs text-white/40">{statLabel}</p>
                     </div>
-                ) : (
-                    <div />
-                )}
-
-                <div
-                    className={
-                        'flex items-center gap-1 text-sm font-medium transition-all duration-300 ' +
-                        (comingSoon
-                            ? ''
-                            : 'translate-x-0 group-hover:translate-x-1')
-                    }
-                    style={{ color: comingSoon ? 'rgba(255,255,255,0.3)' : accent }}
-                >
-                    {comingSoon ? 'Dalam pengembangan' : 'Kelola'}
-                    {!comingSoon && <ArrowRight className="h-4 w-4" />}
+                    <span className="text-sm font-medium text-purple-300 transition-all duration-300 group-hover:translate-x-1 group-hover:text-white">
+                        Kelola →
+                    </span>
                 </div>
-            </div>
-        </Wrapper>
+            </Link>
         </div>
     );
 }
 
-/* ──────────────────── Page ──────────────────── */
+/* ═══════════════════════════ PAGE ═══════════════════════════ */
 export default function AdminDashboard({ stats = {} }) {
     const {
         totalUsers = 0,
@@ -191,14 +118,17 @@ export default function AdminDashboard({ stats = {} }) {
         totalTryouts = 0,
     } = stats;
 
-    const statCards = [
-        { icon: Users, label: 'Total Pengguna', value: totalUsers, accent: '#818cf8' },
-        { icon: ClipboardList, label: 'Soal DAT', value: totalDatQuestions, accent: '#a78bfa' },
-        { icon: GraduationCap, label: 'Jurusan', value: totalMajors, accent: '#c084fc' },
-        { icon: BookOpen, label: 'Materi', value: totalMaterials, accent: '#e879f9' },
+    /* ── Tier 1: Quick Stats ── */
+    const quickStats = [
+        { icon: Users, label: 'Total Pengguna', value: totalUsers },
+        { icon: ClipboardList, label: 'Soal DAT', value: totalDatQuestions },
+        { icon: GraduationCap, label: 'Jurusan', value: totalMajors },
+        { icon: BookOpen, label: 'Materi', value: totalMaterials },
+        { icon: Rocket, label: 'Tryout', value: totalTryouts },
     ];
 
-    const managementCards = [
+    /* ── Tier 2: Management Modules ── */
+    const modules = [
         {
             title: 'Tes DAT',
             description: 'Kelola bank soal & kategori DAT untuk tes potensi mahasiswa.',
@@ -206,7 +136,6 @@ export default function AdminDashboard({ stats = {} }) {
             href: route('admin.dat-tests.index'),
             statValue: totalDatQuestions,
             statLabel: 'soal terdaftar',
-            accent: '#818cf8',
         },
         {
             title: 'Pengguna',
@@ -215,7 +144,6 @@ export default function AdminDashboard({ stats = {} }) {
             href: route('admin.users.index'),
             statValue: totalUsers,
             statLabel: 'pengguna aktif',
-            accent: '#6366f1',
         },
         {
             title: 'Jurusan',
@@ -224,7 +152,6 @@ export default function AdminDashboard({ stats = {} }) {
             href: route('admin.majors.index'),
             statValue: totalMajors,
             statLabel: 'jurusan terdaftar',
-            accent: '#a78bfa',
         },
         {
             title: 'Materi Belajar',
@@ -233,8 +160,6 @@ export default function AdminDashboard({ stats = {} }) {
             href: route('admin.study-materials.index'),
             statValue: totalMaterials,
             statLabel: 'materi tersedia',
-            accent: '#c084fc',
-            comingSoon: false,
         },
         {
             title: 'Tryout',
@@ -243,8 +168,6 @@ export default function AdminDashboard({ stats = {} }) {
             href: route('admin.tryouts.index'),
             statValue: totalTryouts,
             statLabel: 'paket tryout',
-            accent: '#e879f9',
-            comingSoon: false,
         },
     ];
 
@@ -253,52 +176,50 @@ export default function AdminDashboard({ stats = {} }) {
             <Head title="Admin Dashboard" />
 
             <div className="mx-auto w-full max-w-7xl px-4 pb-20 pt-10 sm:px-6 lg:px-8">
-                {/* ── Hero header ── */}
-                <div className="mb-10 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                    <div>
+
+                {/* ────────── TIER 1 — HEADER & PUSAT KONTROL ────────── */}
+                <div className="mb-12">
+                    {/* Title block */}
+                    <div className="mb-8">
                         <div className="mb-2 flex items-center gap-2">
-                            <Sparkles className="h-5 w-5 text-purple-400" />
+                            <Sparkles className="h-4 w-4 text-purple-400" />
                             <span className="text-xs font-semibold uppercase tracking-widest text-purple-400">
                                 Pusat Kontrol
                             </span>
                         </div>
-                        <h1
-                            className="text-3xl font-bold tracking-tight sm:text-4xl"
-                            style={{
-                                background: 'linear-gradient(135deg, #c4b5fd 0%, #818cf8 50%, #a78bfa 100%)',
-                                WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent',
-                            }}
-                        >
+                        <h1 className="text-3xl font-bold text-white">
                             Admin Dashboard
                         </h1>
-                        <p className="mt-2 max-w-md text-sm" style={{ color: 'rgba(255,255,255,0.5)' }}>
+                        <p className="mt-2 max-w-lg text-sm text-white/50">
                             Ringkasan data dan akses cepat ke seluruh modul manajemen NEXA.
                         </p>
                     </div>
+
+                    {/* Quick stat cards */}
+                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+                        {quickStats.map((s) => (
+                            <QuickStatCard key={s.label} {...s} />
+                        ))}
+                    </div>
                 </div>
 
-                {/* ── Quick Stats ── */}
-                <div className="mb-10 grid grid-cols-2 gap-4 lg:grid-cols-4">
-                    {statCards.map((s) => (
-                        <StatCard key={s.label} {...s} />
-                    ))}
-                </div>
+                {/* ────────── TIER 2 — MODUL MANAJEMEN ────────── */}
+                <div>
+                    {/* Section label */}
+                    <div className="mb-6 flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-purple-400" />
+                        <h2 className="text-xs font-semibold uppercase tracking-widest text-purple-300">
+                            Modul Manajemen
+                        </h2>
+                        <div className="ml-2 h-px flex-1 bg-purple-500/15" />
+                    </div>
 
-                {/* ── Section label ── */}
-                <div className="mb-6 flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-purple-400" />
-                    <h2 className="text-sm font-semibold uppercase tracking-widest text-purple-300">
-                        Modul Manajemen
-                    </h2>
-                    <div className="ml-2 h-px flex-1" style={{ background: 'rgba(167,139,250,0.15)' }} />
-                </div>
-
-                {/* ── Management Cards ── */}
-                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                    {managementCards.map((card) => (
-                        <ManagementCard key={card.title} {...card} />
-                    ))}
+                    {/* Module cards grid */}
+                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        {modules.map((mod) => (
+                            <ManagementCard key={mod.title} {...mod} />
+                        ))}
+                    </div>
                 </div>
             </div>
         </AuthenticatedLayout>

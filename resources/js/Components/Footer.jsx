@@ -15,11 +15,11 @@ export function Footer() {
   // Menu navigasi berdasarkan role
   const featureLinks = isAdmin
     ? [
-        { label: "Dashboard Admin", href: route("admin.dashboard") },
-        { label: "Manajemen Tes DAT", href: route("admin.dat-tests.index") },
-        { label: "Manajemen Pengguna", href: route("admin.users.index") },
-        { label: "Manajemen Jurusan", href: route("admin.majors.index") },
-        { label: "Manajemen Materi", href: route("admin.study-materials.index") },
+        { label: "Dashboard", href: route("admin.dashboard") },
+        { label: "Tes DAT", href: route("admin.dat-tests.index") },
+        { label: "Pengguna", href: route("admin.users.index") },
+        { label: "Jurusan", href: route("admin.majors.index") },
+        { label: "Materi", href: route("admin.study-materials.index") },
       ]
     : [
         { label: "Kesesuaian Jurusan", href: route("jurusan.index") },

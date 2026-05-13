@@ -49,7 +49,7 @@ export default function AuthenticatedLayout({ header, children }) {
 
     const adminNavItems = [
         {
-            label: 'Dashboard Admin',
+            label: 'Dashboard',
             href: route('admin.dashboard'),
             active: route().current('admin.dashboard'),
         },

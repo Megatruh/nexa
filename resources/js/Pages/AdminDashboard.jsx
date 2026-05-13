@@ -20,8 +20,9 @@ const sections = [
         title: 'Manajemen Jurusan',
         description: 'Kelola data jurusan & rekomendasi.',
         icon: GraduationCap,
-        href: '#',
-        comingSoon: true,
+        href: route('admin.majors.index'),
+        comingSoon: false,
+
     },
     {
         title: 'Manajemen Materi',

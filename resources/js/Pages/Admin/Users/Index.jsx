@@ -1,7 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { Pencil, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { Pencil, Search, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export default function UsersIndex() {
     const { users, filters } = usePage().props;
@@ -11,10 +11,25 @@ export default function UsersIndex() {
     const direction = filters?.direction ?? 'desc';
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
+    const [search, setSearch] = useState(filters?.search ?? '');
 
     const { data, setData, put, processing, reset } = useForm({
         role: 'user',
     });
+
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            if (search !== (filters?.search ?? '')) {
+                router.get(
+                    route('admin.users.index'),
+                    { search, sort, direction },
+                    { preserveState: true, replace: true }
+                );
+            }
+        }, 300);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [search]);
 
     const openEditRole = (user) => {
         setSelectedUser(user);
@@ -49,7 +64,7 @@ export default function UsersIndex() {
 
         router.get(
             route('admin.users.index'),
-            { sort: key, direction: nextDirection },
+            { sort: key, direction: nextDirection, search },
             { preserveState: true, replace: true }
         );
     };
@@ -87,6 +102,22 @@ export default function UsersIndex() {
                         <p className="mt-2 text-sm text-white/70">
                             Kelola role dan status akun pengguna NEXA.
                         </p>
+                    </div>
+                </div>
+
+                {/* Search Bar */}
+                <div className="mb-6">
+                    <div className="relative max-w-md">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                            <Search className="h-4 w-4 text-white/40" />
+                        </div>
+                        <input
+                            type="text"
+                            className="block w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-10 pr-3 text-sm text-white placeholder:text-white/40 backdrop-blur-md focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                            placeholder="Cari pengguna berdasarkan nama atau email..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
                     </div>
                 </div>
 
@@ -144,7 +175,9 @@ export default function UsersIndex() {
                                             colSpan={5}
                                             className="px-6 py-10 text-center text-sm text-white/60"
                                         >
-                                            Belum ada pengguna terdaftar.
+                                            {search
+                                                ? `Tidak ada pengguna yang cocok dengan pencarian "${search}".`
+                                                : 'Belum ada pengguna terdaftar.'}
                                         </td>
                                     </tr>
                                 )}

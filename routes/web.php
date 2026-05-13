@@ -72,10 +72,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/users/{user}', [AdminController::class, 'usersDestroy'])->name('users.destroy');
 
         // TODO: Fitur Belum Selesai (Under Construction) - Manajemen Tryout
-        // Route::get('/tryouts', [AdminController::class, 'tryoutsIndex'])->name('tryouts.index');
-        // Route::post('/tryouts', [AdminController::class, 'tryoutsStore'])->name('tryouts.store');
-        // Route::put('/tryouts/{tryout}', [AdminController::class, 'tryoutsUpdate'])->name('tryouts.update');
-        // Route::delete('/tryouts/{tryout}', [AdminController::class, 'tryoutsDestroy'])->name('tryouts.destroy');
+        Route::get('/tryouts', [AdminController::class, 'tryoutsIndex'])->name('tryouts.index');
+        Route::post('/tryouts', [AdminController::class, 'tryoutsStore'])->name('tryouts.store');
+        Route::put('/tryouts/{tryout}', [AdminController::class, 'tryoutsUpdate'])->name('tryouts.update');
+        Route::delete('/tryouts/{tryout}', [AdminController::class, 'tryoutsDestroy'])->name('tryouts.destroy');
 
         // Manajemen Data Jurusan
         Route::get('/majors', [AdminController::class, 'majorsIndex'])->name('majors.index');
@@ -85,9 +85,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
         // Manajemen Materi Belajar
         Route::get('/study-materials', [AdminController::class, 'studyMaterialsIndex'])->name('study-materials.index');
-        // Route::post('/study-materials', [AdminController::class, 'studyMaterialsStore'])->name('study-materials.store');
-        // Route::put('/study-materials/{material}', [AdminController::class, 'studyMaterialsUpdate'])->name('study-materials.update');
-        // Route::delete('/study-materials/{material}', [AdminController::class, 'studyMaterialsDestroy'])->name('study-materials.destroy');
+        Route::post('/study-materials', [AdminController::class, 'studyMaterialsStore'])->name('study-materials.store');
+        Route::put('/study-materials/{material}', [AdminController::class, 'studyMaterialsUpdate'])->name('study-materials.update');
+        Route::delete('/study-materials/{material}', [AdminController::class, 'studyMaterialsDestroy'])->name('study-materials.destroy');
     });
 });
 

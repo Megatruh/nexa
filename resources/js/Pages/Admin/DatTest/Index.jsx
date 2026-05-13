@@ -1,7 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { Plus, Pencil, Search, Trash2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 export default function DatTestIndex() {
     const { questions, filters } = usePage().props;
@@ -11,6 +11,7 @@ export default function DatTestIndex() {
     const direction = filters?.direction ?? 'asc';
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingQuestion, setEditingQuestion] = useState(null);
+    const [search, setSearch] = useState(filters?.search ?? '');
 
     const { data, setData, post, put, processing, reset } = useForm({
         question: '',
@@ -20,6 +21,20 @@ export default function DatTestIndex() {
         option_d: '',
         category: '',
     });
+
+    useEffect(() => {
+        const delayDebounceFn = setTimeout(() => {
+            if (search !== (filters?.search ?? '')) {
+                router.get(
+                    route('admin.dat-tests.index'),
+                    { search, sort, direction },
+                    { preserveState: true, replace: true }
+                );
+            }
+        }, 300);
+
+        return () => clearTimeout(delayDebounceFn);
+    }, [search]);
 
     const openCreateModal = () => {
         setEditingQuestion(null);
@@ -73,7 +88,7 @@ export default function DatTestIndex() {
 
         router.get(
             route('admin.dat-tests.index'),
-            { sort: key, direction: nextDirection },
+            { sort: key, direction: nextDirection, search },
             { preserveState: true, replace: true }
         );
     };
@@ -110,6 +125,22 @@ export default function DatTestIndex() {
                         <Plus className="h-4 w-4" />
                         Tambah Soal
                     </button>
+                </div>
+
+                {/* Search Bar */}
+                <div className="mb-6">
+                    <div className="relative max-w-md">
+                        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                            <Search className="h-4 w-4 text-white/40" />
+                        </div>
+                        <input
+                            type="text"
+                            className="block w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-10 pr-3 text-sm text-white placeholder:text-white/40 backdrop-blur-md focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                            placeholder="Cari soal atau kategori..."
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
                 </div>
 
                 <div className="overflow-hidden rounded-2xl border border-white/10 bg-space-mid/50 backdrop-blur-md">
@@ -155,7 +186,9 @@ export default function DatTestIndex() {
                                             colSpan={7}
                                             className="px-6 py-10 text-center text-sm text-white/60"
                                         >
-                                            Belum ada soal DAT yang tersedia.
+                                            {search
+                                                ? `Tidak ada soal yang cocok dengan pencarian "${search}".`
+                                                : 'Belum ada soal DAT yang tersedia.'}
                                         </td>
                                     </tr>
                                 )}

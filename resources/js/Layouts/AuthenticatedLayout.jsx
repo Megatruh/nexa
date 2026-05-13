@@ -54,24 +54,29 @@ export default function AuthenticatedLayout({ header, children }) {
             active: route().current('admin.dashboard'),
         },
         {
-            label: 'Manajemen Tes DAT',
+            label: 'Tes DAT',
             href: route('admin.dat-tests.index'),
             active: route().current('admin.dat-tests.index'),
         },
         {
-            label: 'Manajemen Pengguna',
+            label: 'Pengguna',
             href: route('admin.users.index'),
             active: route().current('admin.users.index'),
         },
         {
-            label: 'Manajemen Jurusan',
+            label: 'Jurusan',
             href: route('admin.majors.index'),
             active: route().current('admin.majors.index'),
         },
         {
-            label: 'Manajemen Materi',
+            label: 'Materi',
             href: route('admin.study-materials.index'),
             active: route().current('admin.study-materials.index'),
+        },
+        {
+            label: 'Tryout',
+            href: route('admin.tryouts.index'),
+            active: route().current('admin.tryouts.index'),
         },
     ];
 

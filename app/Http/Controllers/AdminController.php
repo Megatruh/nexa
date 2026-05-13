@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\LearningMaterial;
 use App\Models\StudyProgramDescription;
 use App\Models\Survey;
+use App\Models\Tryout;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -14,7 +16,17 @@ class AdminController extends Controller
 {
     public function dashboard(): Response
     {
-        return Inertia::render('AdminDashboard');
+        $stats = [
+            'totalUsers'        => User::count(),
+            'totalDatQuestions'  => Survey::count(),
+            'totalMajors'       => StudyProgramDescription::count(),
+            'totalMaterials'    => LearningMaterial::count(),
+            'totalTryouts'      => Tryout::count(),
+        ];
+
+        return Inertia::render('AdminDashboard', [
+            'stats' => $stats,
+        ]);
     }
 
     public function datTestsIndex(Request $request): Response
@@ -22,6 +34,7 @@ class AdminController extends Controller
         $allowedSorts = ['category', 'question'];
         $sort = $request->get('sort', 'category');
         $direction = $request->get('direction', 'asc');
+        $search = $request->get('search');
 
         if (!in_array($sort, $allowedSorts, true)) {
             $sort = 'category';
@@ -41,6 +54,10 @@ class AdminController extends Controller
                 'option_d',
                 'category',
             ])
+            ->when($search, function ($query, $search) {
+                $query->where('question', 'like', "%{$search}%")
+                    ->orWhere('category', 'like', "%{$search}%");
+            })
             ->orderBy($sort, $direction)
             ->paginate(12)
             ->withQueryString();
@@ -50,6 +67,7 @@ class AdminController extends Controller
             'filters' => [
                 'sort' => $sort,
                 'direction' => $direction,
+                'search' => $search,
             ],
         ]);
     }
@@ -77,6 +95,7 @@ class AdminController extends Controller
         $allowedSorts = ['name', 'role', 'created_at'];
         $sort = $request->get('sort', 'created_at');
         $direction = $request->get('direction', 'desc');
+        $search = $request->get('search');
 
         if (!in_array($sort, $allowedSorts, true)) {
             $sort = 'created_at';
@@ -88,6 +107,10 @@ class AdminController extends Controller
 
         $users = User::query()
             ->select(['id', 'name', 'email', 'role', 'created_at'])
+            ->when($search, function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            })
             ->orderBy($sort, $direction)
             ->paginate(12)
             ->withQueryString();
@@ -97,6 +120,7 @@ class AdminController extends Controller
             'filters' => [
                 'sort' => $sort,
                 'direction' => $direction,
+                'search' => $search,
             ],
         ]);
     }
@@ -113,6 +137,7 @@ class AdminController extends Controller
         ];
         $sort = $request->get('sort', 'name');
         $direction = $request->get('direction', 'asc');
+        $search = $request->get('search');
 
         if (!in_array($sort, $allowedSorts, true)) {
             $sort = 'name';
@@ -133,6 +158,10 @@ class AdminController extends Controller
                 'passing_grade',
                 'description',
             ])
+            ->when($search, function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('description', 'like', "%{$search}%");
+            })
             ->orderBy($sort, $direction)
             ->paginate(12)
             ->withQueryString();
@@ -142,6 +171,7 @@ class AdminController extends Controller
             'filters' => [
                 'sort' => $sort,
                 'direction' => $direction,
+                'search' => $search,
             ],
         ]);
     }
@@ -198,6 +228,41 @@ class AdminController extends Controller
     public function studyMaterialsIndex(): Response
     {
         return Inertia::render('Admin/StudyMaterials/Index');
+    }
+
+    public function studyMaterialsStore(Request $request): RedirectResponse
+    {
+        return back()->with('success', 'Materi belajar berhasil ditambahkan.');
+    }
+
+    public function studyMaterialsUpdate(Request $request, string $studyMaterial): RedirectResponse
+    {
+        return back()->with('success', 'Materi belajar berhasil diperbarui.');
+    }
+
+    public function studyMaterialsDestroy(string $studyMaterial): RedirectResponse
+    {
+        return back()->with('success', 'Materi belajar berhasil dihapus.');
+    }
+
+    public function tryoutsIndex(): Response
+    {
+        return Inertia::render('Admin/Tryouts/Index');
+    }
+
+    public function tryoutsStore(Request $request): RedirectResponse
+    {
+        return back()->with('success', 'Tryout berhasil ditambahkan.');
+    }
+
+    public function tryoutsUpdate(Request $request, string $tryout): RedirectResponse
+    {
+        return back()->with('success', 'Tryout berhasil diperbarui.');
+    }
+
+    public function tryoutsDestroy(string $tryout): RedirectResponse
+    {
+        return back()->with('success', 'Tryout berhasil dihapus.');
     }
 
     public function usersUpdateRole(Request $request, string $user): RedirectResponse

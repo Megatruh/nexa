@@ -56,7 +56,7 @@ export function Footer() {
               NEXA
             </span>
             <p className="mt-3 text-sm text-purple-400 font-syne leading-relaxed max-w-xs">
-              Platform simulasi UTBK-SNBT dan analisis peluang masuk program studi terpercaya.
+              Next-Gen Exam Analytics. Platform analisis peluang masuk program studi berbasis data yang dirancang khusus untuk mahasiswa masa depan.  
             </p>
           </div>
 

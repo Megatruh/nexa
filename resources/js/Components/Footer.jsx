@@ -1,16 +1,45 @@
 /**
  * Footer - Footer aplikasi NEXA
+ * Role-aware: admin/user menu berbeda, jika login tampil Keluar saja
  */
 
 import React from "react";
-import { Link } from "@inertiajs/react";
+import { Link, usePage } from "@inertiajs/react";
 import { ROUTES } from "../_constants/routes";
 
 export function Footer() {
+  const { auth } = usePage().props;
+  const user = auth?.user ?? null;
+  const isAdmin = user?.role === "admin";
+
+  // Menu navigasi berdasarkan role
+  const featureLinks = isAdmin
+    ? [
+        { label: "Dashboard Admin", href: route("admin.dashboard") },
+        { label: "Manajemen Tes DAT", href: route("admin.dat-tests.index") },
+        { label: "Manajemen Pengguna", href: route("admin.users.index") },
+        { label: "Manajemen Jurusan", href: route("admin.majors.index") },
+        { label: "Manajemen Materi", href: route("admin.study-materials.index") },
+      ]
+    : [
+        { label: "Kesesuaian Jurusan", href: route("jurusan.index") },
+        { label: "Ulasan Prodi", href: route("prodi.index") },
+        { label: "Belajar", href: route("subtests.index") },
+        { label: "Try Out", href: route("tryout.index") },
+      ];
+
+  // Menu akun: jika sudah login → Keluar saja, jika belum → Daftar & Masuk
+  const accountLinks = user
+    ? [{ label: "Keluar", href: route("logout"), method: "post", as: "button" }]
+    : [
+        { label: "Daftar", href: route("register") },
+        { label: "Masuk", href: route("login") },
+      ];
+
   return (
     <footer
       className="mt-20 border-t backdrop-blur"
-      style={{ borderColor: "rgba(167,139,250,0.15) blur-md" }}
+      style={{ borderColor: "rgba(167,139,250,0.15)" }}
     >
       <div className="max-w-6xl mx-auto px-6 py-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
@@ -31,19 +60,16 @@ export function Footer() {
             </p>
           </div>
 
-          {/* Fitur */}
+          {/* Navigasi — label berubah sesuai role */}
           <div>
-            <h4 className="text-sm font-bold text-white mb-4 font-syne">Fitur</h4>
+            <h4 className="text-sm font-bold text-white mb-4 font-syne">
+              {isAdmin ? "Admin" : "Fitur"}
+            </h4>
             <ul className="space-y-2.5">
-              {[
-                { label: "Kesesuaian Jurusan", to: ROUTES.KESESUAIAN },
-                { label: "Ulasan Prodi", to: ROUTES.ULASAN_PRODI },
-                { label: "Belajar", to: ROUTES.BELAJAR_MATERI },
-                { label: "Try Out", to: ROUTES.TRYOUT },
-              ].map((item) => (
-                <li key={item.to}>
+              {featureLinks.map((item) => (
+                <li key={item.href}>
                   <Link
-                    to={item.to}
+                    href={item.href}
                     className="text-sm text-purple-400 hover:text-purple-200 transition-colors font-syne"
                   >
                     {item.label}
@@ -57,19 +83,30 @@ export function Footer() {
           <div>
             <h4 className="text-sm font-bold text-white mb-4 font-syne">Akun</h4>
             <ul className="space-y-2.5">
-              {[
-                { label: "Daftar", to: ROUTES.REGISTER },
-                { label: "Masuk", to: ROUTES.LOGIN },
-              ].map((item) => (
-                <li key={item.to}>
-                  <Link
-                    to={item.to}
-                    className="text-sm text-purple-400 hover:text-purple-200 transition-colors font-syne"
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
+              {accountLinks.map((item) =>
+                item.method === "post" ? (
+                  // Tombol Keluar — pakai POST untuk logout
+                  <li key={item.label}>
+                    <Link
+                      href={item.href}
+                      method="post"
+                      as="button"
+                      className="text-sm text-red-400 hover:text-red-200 transition-colors font-syne cursor-pointer"
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                ) : (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className="text-sm text-purple-400 hover:text-purple-200 transition-colors font-syne"
+                    >
+                      {item.label}
+                    </Link>
+                  </li>
+                )
+              )}
             </ul>
           </div>
         </div>

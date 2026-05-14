@@ -91,6 +91,32 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 });
 
+Route::middleware(['auth', 'verified'])->prefix('tryout')->name('tryout.')->group(function () {
+ 
+    // -- Halaman utama: daftar tryout & riwayat --
+    Route::get('/', [TryoutController::class, 'index'])->name('index');
+ 
+    // -- Halaman ujian: tampilkan soal 1 per halaman --
+    Route::get('/{tryout_id}/subtest/{subtest_id}', [TryoutController::class, 'showSubtest'])
+        ->name('subtest.show');
+ 
+    // -- Auto-save jawaban per soal --
+    Route::post('/answer', [TryoutController::class, 'storeAnswer'])
+        ->name('answer.store');
+ 
+    // -- Selesaikan satu subtes (manual atau timer habis) --
+    Route::post('/subtest/{session_subtest_id}/finish', [TryoutController::class, 'finishSubtest'])
+        ->name('subtest.finish');
+ 
+    // -- Submit exam keseluruhan & hitung skor --
+    Route::post('/session/{session_id}/submit', [TryoutController::class, 'submitExam'])
+        ->name('exam.submit');
+ 
+    // -- Halaman hasil tryout --
+    Route::get('/result/{session_id}', [TryoutController::class, 'showResult'])
+        ->name('result');
+});
+
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');

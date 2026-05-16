@@ -16,7 +16,18 @@ class TryoutSession extends Model
         'started_at',
         'finished_at',
         'study_program_id',
-        'total_score'
+        'total_score',
+        'score_details',
+        'choice_1_id',
+        'choice_2_id',
+        'admission_status',
+        'admitted_program',
+    ];
+
+    protected $casts = [
+        'score_details' => 'array',
+        'started_at'    => 'datetime',
+        'finished_at'   => 'datetime',
     ];
 
     /**
@@ -33,5 +44,37 @@ class TryoutSession extends Model
     public function sessionSubtests()
     {
         return $this->hasMany(TryoutSessionSubtest::class);
+    }
+
+    /**
+     * Relasi ke semua jawaban di sesi ini
+     */
+    public function answers()
+    {
+        return $this->hasMany(TryoutAnswer::class);
+    }
+
+    /**
+     * Relasi ke pilihan jurusan 1
+     */
+    public function choice1()
+    {
+        return $this->belongsTo(StudyProgramDescription::class, 'choice_1_id');
+    }
+
+    /**
+     * Relasi ke pilihan jurusan 2
+     */
+    public function choice2()
+    {
+        return $this->belongsTo(StudyProgramDescription::class, 'choice_2_id');
+    }
+
+    /**
+     * Relasi ke user pemilik sesi
+     */
+    public function user()
+    {
+        return $this->belongsTo(\App\Models\User::class);
     }
 }

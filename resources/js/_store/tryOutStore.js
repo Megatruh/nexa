@@ -4,12 +4,17 @@
  * Mengelola:
  *  - Daftar soal dari Inertia props
  *  - Indeks soal aktif (currentIndex)
- *  - Jawaban sementara (belum di-submit ke server)
- *  - Flag ragu-ragu per soal
+ *  - Jawaban sementara + sinkronisasi ke server via axios (debounce 800ms)
+ *  - Flag ragu-ragu per soal (sinkron ke server)
  *  - Countdown timer (berbasis sisa waktu dari server)
+ *  - Pending sync tracking untuk indikator UI
  */
 
 import { create } from "zustand";
+import axios from "axios";
+
+// Debounce timer map untuk setiap questionId
+const _debounceTimers = {};
 
 export const useTryoutStore = create((set, get) => ({
     // ─── STATE ────────────────────────────────────────────────
@@ -43,41 +48,50 @@ export const useTryoutStore = create((set, get) => ({
     /** Callback yang dipanggil saat waktu = 0 (isi dari komponen) */
     _onTimeUp: null,
 
+    /** ID sesi tryout aktif (untuk request ke server) */
+    _sessionId: null,
+
+    /**
+     * Jawaban yang belum tersinkron ke server:
+     * { [questionId]: { answer, is_doubtful } }
+     */
+    _pendingSync: {},
+
     // ─── ACTIONS ─────────────────────────────────────────────
 
     /**
      * Inisialisasi store saat komponen Exam mount.
-     *
-     * @param {Object} params
-     * @param {Array}  params.soalList      - Array soal dari subtest
-     * @param {Object} params.allAnswers    - { [questionId]: answer } dari server
-     * @param {number} params.sisaWaktu     - Sisa waktu (detik) dari server
-     * @param {number} params.halamanAktif  - Halaman pagination saat ini (1-based)
-     * @param {Function} params.onTimeUp    - Callback ketika waktu habis
      */
-    initSesi: ({ soalList, allAnswers = {}, sisaWaktu, halamanAktif = 1, onTimeUp }) => {
+    initSesi: ({ soalList, allAnswers = {}, sisaWaktu, halamanAktif = 1, onTimeUp, sessionId }) => {
         // Hentikan timer lama kalau ada
         const { _timerId } = get();
         if (_timerId) clearInterval(_timerId);
 
+        // Bersihkan semua debounce timer yang tersisa
+        Object.values(_debounceTimers).forEach(clearTimeout);
+        Object.keys(_debounceTimers).forEach(k => delete _debounceTimers[k]);
+
         set({
             soalList,
-            currentIndex: halamanAktif - 1, // konversi ke 0-based
+            currentIndex: halamanAktif - 1,
             jawaban: { ...allAnswers },
             flagged: new Set(),
-            sisaWaktu,
+            sisaWaktu: Math.floor(sisaWaktu), // Pastikan integer dari awal
             isTimerRunning: false,
             _timerId: null,
             _onTimeUp: onTimeUp ?? null,
+            _sessionId: sessionId ?? null,
+            _pendingSync: {},
         });
     },
 
     /**
      * Mulai / resume countdown timer.
+     * Timer mengurangi 1 detik tiap interval — selalu integer.
      */
     startTimer: () => {
         const { _timerId, isTimerRunning } = get();
-        if (isTimerRunning || _timerId) return; // sudah berjalan
+        if (isTimerRunning || _timerId) return;
 
         const id = setInterval(() => {
             const { sisaWaktu, _onTimeUp } = get();
@@ -106,7 +120,6 @@ export const useTryoutStore = create((set, get) => ({
 
     /**
      * Pindah ke soal dengan indeks tertentu.
-     *
      * @param {number} index - 0-based
      */
     goToSoal: (index) => {
@@ -132,29 +145,136 @@ export const useTryoutStore = create((set, get) => ({
     },
 
     /**
-     * Simpan jawaban sementara di store (belum ke server).
-     * Server di-update secara terpisah via Inertia router.post.
+     * Simpan jawaban — update state lokal secara INSTAN lalu
+     * sync ke server dengan debounce 800ms untuk menghindari
+     * request berlebihan saat user cepat mengganti jawaban.
      *
      * @param {number} questionId
-     * @param {string} opsi        - 'A' | 'B' | 'C' | 'D' | 'E'
+     * @param {string} opsi - 'A' | 'B' | 'C' | 'D' | 'E'
      */
     simpanJawaban: (questionId, opsi) => {
+        const { _sessionId, flagged } = get();
+
+        // 1. Update state lokal INSTAN (UI responsif)
         set((state) => ({
             jawaban: { ...state.jawaban, [questionId]: opsi },
+            _pendingSync: {
+                ...state._pendingSync,
+                [questionId]: {
+                    answer: opsi,
+                    is_doubtful: flagged.has(questionId),
+                },
+            },
         }));
+
+        // 2. Debounce 800ms — kirim ke server
+        if (_debounceTimers[questionId]) {
+            clearTimeout(_debounceTimers[questionId]);
+        }
+
+        _debounceTimers[questionId] = setTimeout(() => {
+            get()._syncToServer(questionId);
+            delete _debounceTimers[questionId];
+        }, 800);
     },
 
     /**
-     * Toggle flag ragu-ragu.
+     * Toggle flag ragu-ragu. Juga sync ke server jika sudah ada jawaban.
      *
      * @param {number} questionId
      */
     toggleFlag: (questionId) => {
+        const { jawaban, _sessionId } = get();
+
         set((state) => {
             const flagged = new Set(state.flagged);
-            flagged.has(questionId) ? flagged.delete(questionId) : flagged.add(questionId);
+            const wasFlagged = flagged.has(questionId);
+            wasFlagged ? flagged.delete(questionId) : flagged.add(questionId);
+
+            const newIsDoubtful = !wasFlagged;
+
+            // Jika sudah ada jawaban, sync status ragu-ragu ke server
+            if (jawaban[questionId] && _sessionId) {
+                const updatedPending = {
+                    ...state._pendingSync,
+                    [questionId]: {
+                        answer: jawaban[questionId],
+                        is_doubtful: newIsDoubtful,
+                    },
+                };
+
+                // Langsung sync (tanpa debounce untuk flag toggle)
+                setTimeout(() => get()._syncToServer(questionId), 0);
+
+                return { flagged, _pendingSync: updatedPending };
+            }
+
             return { flagged };
         });
+    },
+
+    /**
+     * Kirim jawaban ke server via axios POST.
+     * @param {number} questionId
+     * @private
+     */
+    _syncToServer: async (questionId) => {
+        const { _sessionId, _pendingSync } = get();
+        const pendingData = _pendingSync[questionId];
+
+        if (!_sessionId || !pendingData) return;
+
+        try {
+            await axios.post(route('tryout.answer.store'), {
+                tryout_session_id: _sessionId,
+                tryout_question_id: questionId,
+                answer: pendingData.answer,
+                is_doubtful: pendingData.is_doubtful ?? false,
+            });
+
+            // Hapus dari pending setelah sukses
+            set((state) => {
+                const newPending = { ...state._pendingSync };
+                delete newPending[questionId];
+                return { _pendingSync: newPending };
+            });
+        } catch (err) {
+            console.error('[tryOutStore] sync error for question', questionId, err);
+            // Biarkan tetap di pendingSync agar bisa di-retry saat flush
+        }
+    },
+
+    /**
+     * Paksa kirim SEMUA jawaban pending ke server secara berurutan.
+     * Dipanggil sebelum finishSubtest untuk memastikan semua jawaban terkirim.
+     */
+    flushPendingSync: async () => {
+        const { _pendingSync, _sessionId } = get();
+        const questionIds = Object.keys(_pendingSync);
+
+        if (questionIds.length === 0 || !_sessionId) return;
+
+        // Batalkan semua debounce yang masih menunggu
+        Object.values(_debounceTimers).forEach(clearTimeout);
+        Object.keys(_debounceTimers).forEach(k => delete _debounceTimers[k]);
+
+        // Kirim semua pending secara parallel
+        const promises = questionIds.map((qId) => {
+            const data = _pendingSync[qId];
+            return axios.post(route('tryout.answer.store'), {
+                tryout_session_id: _sessionId,
+                tryout_question_id: parseInt(qId),
+                answer: data.answer,
+                is_doubtful: data.is_doubtful ?? false,
+            }).catch(err => {
+                console.error('[tryOutStore] flush error for question', qId, err);
+            });
+        });
+
+        await Promise.allSettled(promises);
+
+        // Bersihkan semua pending
+        set({ _pendingSync: {} });
     },
 
     // ─── SELECTORS (computed helpers) ────────────────────────
@@ -178,11 +298,12 @@ export const useTryoutStore = create((set, get) => ({
         return Object.values(jawaban).filter(Boolean).length;
     },
 
-    /** Format MM:SS dari sisaWaktu */
+    /** Format MM:SS dari sisaWaktu — selalu integer */
     getFormattedTime: () => {
         const { sisaWaktu } = get();
-        const mins = Math.floor(sisaWaktu / 60);
-        const secs = sisaWaktu % 60;
+        const totalSeconds = Math.floor(sisaWaktu);
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
         return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     },
 
@@ -191,6 +312,11 @@ export const useTryoutStore = create((set, get) => ({
     resetStore: () => {
         const { _timerId } = get();
         if (_timerId) clearInterval(_timerId);
+
+        // Bersihkan debounce timers
+        Object.values(_debounceTimers).forEach(clearTimeout);
+        Object.keys(_debounceTimers).forEach(k => delete _debounceTimers[k]);
+
         set({
             soalList: [],
             currentIndex: 0,
@@ -200,6 +326,8 @@ export const useTryoutStore = create((set, get) => ({
             _timerId: null,
             isTimerRunning: false,
             _onTimeUp: null,
+            _sessionId: null,
+            _pendingSync: {},
         });
     },
 }));

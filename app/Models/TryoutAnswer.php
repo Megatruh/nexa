@@ -9,9 +9,9 @@ class TryoutAnswer extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'id',
         'tryout_session_id',
         'tryout_question_id',
-        'answer'
+        'answer',
+        'is_doubtful',
     ];
 }

@@ -54,7 +54,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/', [TryoutController::class, 'index'])->name('index');
             Route::get('/{tryout_id}/subtest/{subtest_id}', [TryoutController::class, 'showSubtest'])->name('subtest.show');
             Route::post('/answer', [TryoutController::class, 'storeAnswer'])->name('answer.store');
-            Route::post('/subtest-finish/{session_subtest_id}', [TryoutController::class, 'finishSubtest'])->name('subtest.finish');
+            Route::post('/choices', [TryoutController::class, 'storeChoices'])->name('choices.store');
+            Route::post('/suspend', [TryoutController::class, 'suspendExam'])->name('suspend');
+            Route::post('/subtest/{session_subtest_id}/finish', [TryoutController::class, 'finishSubtest'])->name('subtest.finish');
+            Route::post('/session/{session_id}/submit', [TryoutController::class, 'submitExam'])->name('exam.submit');
+            Route::get('/result/{session_id}', [TryoutController::class, 'showResult'])->name('result');
         });
     });
     Route::prefix('admin')->name('admin.')->middleware(['admin'])->group(function () {
@@ -91,31 +95,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 });
 
-Route::middleware(['auth', 'verified'])->prefix('tryout')->name('tryout.')->group(function () {
- 
-    // -- Halaman utama: daftar tryout & riwayat --
-    Route::get('/', [TryoutController::class, 'index'])->name('index');
- 
-    // -- Halaman ujian: tampilkan soal 1 per halaman --
-    Route::get('/{tryout_id}/subtest/{subtest_id}', [TryoutController::class, 'showSubtest'])
-        ->name('subtest.show');
- 
-    // -- Auto-save jawaban per soal --
-    Route::post('/answer', [TryoutController::class, 'storeAnswer'])
-        ->name('answer.store');
- 
-    // -- Selesaikan satu subtes (manual atau timer habis) --
-    Route::post('/subtest/{session_subtest_id}/finish', [TryoutController::class, 'finishSubtest'])
-        ->name('subtest.finish');
- 
-    // -- Submit exam keseluruhan & hitung skor --
-    Route::post('/session/{session_id}/submit', [TryoutController::class, 'submitExam'])
-        ->name('exam.submit');
- 
-    // -- Halaman hasil tryout --
-    Route::get('/result/{session_id}', [TryoutController::class, 'showResult'])
-        ->name('result');
-});
+
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

@@ -9,14 +9,13 @@ class TryoutSessionSubtest extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'id',
         'tryout_session_id',
         'tryout_subtest_id',
         'started_at',
-        'finished_at'
+        'finished_at',
     ];
     
-    public function tryoutSubtest()
+    public function subtest()
     {
         return $this->belongsTo(TryoutSubtest::class, 'tryout_subtest_id');
     }

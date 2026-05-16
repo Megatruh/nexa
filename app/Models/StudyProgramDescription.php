@@ -8,7 +8,8 @@ class StudyProgramDescription extends Model
 {
     protected $fillable = [
         'name',
-        'passing_grade',
+        'passing_grade_min',
+        'passing_grade_max',
         'career_prospects',
         'description',
         'rating',
@@ -18,5 +19,4 @@ class StudyProgramDescription extends Model
         'related_subjects',
         'capacity',
     ];
-
 }

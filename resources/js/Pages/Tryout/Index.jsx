@@ -252,7 +252,7 @@ export default function Index({ auth, activeTryouts, history, studyPrograms }) {
                                 <option value="">-- Pilih Program Studi --</option>
                                 {(studyPrograms ?? []).map((p) => (
                                     <option key={p.id} value={p.id}>
-                                        {p.name} {p.passing_grade ? `(PG: ${p.passing_grade})` : ''}
+                                        {p.name} {(p.passing_grade_min || p.passing_grade_max) ? `(PG: ${p.passing_grade_min} - ${p.passing_grade_max})` : ''}
                                     </option>
                                 ))}
                             </select>
@@ -275,7 +275,7 @@ export default function Index({ auth, activeTryouts, history, studyPrograms }) {
                                 <option value="">-- Pilih Program Studi --</option>
                                 {(studyPrograms ?? []).filter(p => String(p.id) !== String(choiceForm.data.choice_1_id)).map((p) => (
                                     <option key={p.id} value={p.id}>
-                                        {p.name} {p.passing_grade ? `(PG: ${p.passing_grade})` : ''}
+                                        {p.name} {(p.passing_grade_min || p.passing_grade_max) ? `(PG: ${p.passing_grade_min} - ${p.passing_grade_max})` : ''}
                                     </option>
                                 ))}
                             </select>

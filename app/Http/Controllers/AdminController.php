@@ -182,7 +182,8 @@ class AdminController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'passing_grade' => ['nullable', 'string', 'max:255'],
+            'passing_grade_min' => ['nullable', 'string', 'max:255'],
+            'passing_grade_max' => ['nullable', 'string', 'max:255'],
             'career_prospects' => ['nullable', 'string'],
             'description' => ['nullable', 'string'],
             'rating' => ['nullable', 'numeric', 'min:0', 'max:5'],

@@ -1,0 +1,21 @@
+question_text,question_image,option_a,option_b,option_c,option_d,option_e,correct_answer,score_weight
+"Sebuah toko menjual baju dengan harga Rp$120.000$ per potong. Jika toko memberikan diskon $25\%$, lalu mengenakan pajak $10\%$ dari harga setelah diskon, maka harga akhir yang harus dibayar pembeli adalah...",,Rp$88.000$,Rp$90.000$,Rp$99.000$,Rp$102.000$,Rp$108.000$,C,1
+"Ani dapat menyelesaikan sebuah pekerjaan dalam $12$ hari, sedangkan Budi dapat menyelesaikannya dalam $8$ hari. Jika mereka bekerja bersama, berapa hari pekerjaan tersebut selesai?",,$3\frac{1}{5}$ hari,$4$ hari,$4\frac{4}{5}$ hari,$5$ hari,$6$ hari,C,1
+"Sebuah mobil menempuh jarak $240$ km dalam waktu $3$ jam. Jika kecepatan dinaikkan $20$ km/jam, maka waktu yang diperlukan untuk menempuh jarak yang sama adalah...",,$2$ jam $15$ menit,$2$ jam $30$ menit,$2$ jam $40$ menit,$2$ jam $45$ menit,$3$ jam,C,1
+"Rata-rata nilai ulangan $5$ siswa adalah $76$. Jika seorang siswa baru masuk dengan nilai $88$, maka rata-rata nilai keenam siswa tersebut adalah...",,$77$,$78$,$79$,$80$,$81$,B,1
+"Perbandingan uang Rina dan Sari adalah $3 : 5$. Jika jumlah uang mereka Rp$480.000$, maka selisih uang keduanya adalah...",,Rp$90.000$,Rp$100.000$,$\text{Rp}110.000$,Rp$120.000$,Rp$130.000$,D,1
+"Sebuah kolam renang dapat diisi penuh oleh pipa A dalam $6$ jam dan oleh pipa B dalam $4$ jam. Jika kedua pipa dibuka bersamaan, berapa jam kolam tersebut terisi penuh?",,$2$ jam,"$2{,}4$ jam",$3$ jam,"$3{,}5$ jam",$4$ jam,B,1
+Harga $5$ kg apel dan $3$ kg jeruk adalah Rp$74.000$. Harga $3$ kg apel dan $5$ kg jeruk adalah Rp$66.000$. Harga $1$ kg apel adalah...,,Rp$8.000$,Rp$9.000$,Rp$10.000$,Rp$11.000$,Rp$12.000$,C,1
+"Sebuah persegi panjang memiliki panjang $(2x + 3)$ cm dan lebar $(x + 1)$ cm. Jika kelilingnya $46$ cm, maka luasnya adalah...",,$80$ cm$^2$,$84$ cm$^2$,$88$ cm$^2$,$90$ cm$^2$,$96$ cm$^2$,B,1
+"Suatu populasi bakteri berlipat ganda setiap $3$ jam. Jika pada pukul $06.00$ terdapat $200$ bakteri, maka pada pukul $18.00$ terdapat berberapa bakteri?",,$800$,$1.200$,$1.600$,$2.000$,$3.200$,C,1
+Sebuah toko elektronik menjual laptop seharga Rp$8.500.000$ dengan keuntungan $25\%$ dari harga beli. Harga beli laptop tersebut adalah...,,Rp$6.000.000$,Rp$6.400.000$,Rp$6.800.000$,Rp$7.000.000$,Rp$7.200.000$,C,1
+Dua buah dadu dilempar bersamaan. Peluang muncul jumlah mata dadu yang sama dengan $7$ adalah...,,$\frac{1}{12}$,$\frac{1}{9}$,$\frac{1}{8}$,$\frac{1}{6}$,$\frac{1}{4}$,D,1
+"Seorang pedagang membeli $60$ buah mangga seharga Rp$180.000$. Sebanyak $10$ buah busuk dan tidak bisa dijual. Agar pedagang memperoleh keuntungan $20\%$, maka harga jual per buah mangga adalah...",,Rp$3.200$,Rp$3.600$,Rp$4.000$,Rp$4.320$,Rp$4.800$,D,1
+"Data nilai ujian: $70, 75, 80, 80, 85, 85, 85, 90, 90, 95$. Modus dan median berturut-turut dari data tersebut adalah...",,"$80$ dan $82{,}5$","$85$ dan $82{,}5$",$85$ dan $85$,$80$ dan $85$,$85$ dan $80$,B,1
+"Sebuah bak air berbentuk balok berukuran panjang $150$ cm, lebar $80$ cm, dan tinggi $60$ cm. Air dialirkan dengan debit $4$ liter/menit. Berapa menit waktu yang diperlukan untuk mengisi bak hingga penuh?",,$150$ menit,$160$ menit,$170$ menit,$180$ menit,$200$ menit,D,1
+"Jika $p$ dan $q$ adalah akar-akar persamaan $x^2 - 7x + 10 = 0$, maka nilai dari $p^2 + q^2$ adalah...",,$27$,$29$,$31$,$33$,$35$,B,1
+"Sebuah investasi menghasilkan bunga majemuk $10\%$ per tahun. Jika modal awal Rp$5.000.000$, maka nilai investasi setelah $2$ tahun adalah...",,Rp$5.500.000$,Rp$5.950.000$,Rp$6.000.000$,Rp$6.050.000$,Rp$6.100.000$,D,1
+"Dalam sebuah kantong terdapat $4$ bola merah dan $6$ bola putih. Jika diambil $2$ bola secara acak tanpa pengembalian, peluang terambil keduanya bola merah adalah...",,$\frac{2}{15}$,$\frac{1}{6}$,$\frac{4}{15}$,$\frac{2}{5}$,$\frac{1}{3}$,A,1
+"Seorang siswa mendapat nilai rata-rata $82$ dari $4$ mata pelajaran. Agar rata-rata menjadi $84$ setelah ujian mata pelajaran ke-$5$, nilai yang harus diperoleh pada ujian ke-$5$ adalah...",,$88$,$90$,$92$,$94$,$96$,C,1
+Sebuah segitiga sama kaki memiliki panjang kaki $13$ cm dan alas $10$ cm. Luas segitiga tersebut adalah...,,$50$ cm$^2$,$55$ cm$^2$,$60$ cm$^2$,$65$ cm$^2$,$70$ cm$^2$,C,1
+"Jika $\frac{2x+1}{3} - \frac{x-2}{2} = 3$, maka nilai $x$ adalah...",,$3$,$4$,$5$,$6$,$7$,C,1

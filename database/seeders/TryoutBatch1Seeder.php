@@ -85,6 +85,18 @@ class TryoutBatch1Seeder extends Seeder
             'duration' => 25,
             'order'    => 5,
         ],
+        [
+            'name'     => 'Pemahaman Bacaan dan Menulis',
+            'file'     => 'batch1_pbm.csv',
+            'duration' => 20,
+            'order'    => 6,
+        ],
+        [
+            'name'     => 'Penalaran Matematika',
+            'file'     => 'batch1_pm.csv',
+            'duration' => 30,
+            'order'    => 7,
+        ]
     ];
 
     public function run(): void

@@ -29,6 +29,26 @@ export default function Index({ subtests }) {
                                             {subtest.questions_count} Soal
                                         </span>
                                     </div>
+
+                                    {subtest.learning_materials && subtest.learning_materials.length > 0 &&(
+                                        <div className="mb-6">
+                                            <h4 className="text-sm font-semibold text-gray-700 mb-2">Daftar Materi:</h4>
+                                            <ul className="space-y-1">
+                                                {subtest.learning_materials.map((material) => (
+                                                    <li key={material.id}>
+                                                        <a 
+                                                            href={`/storage/${material.file_path}`} 
+                                                            target="_blank" 
+                                                            rel="noreferrer"
+                                                            className="text-sm text-blue-600 hover:text-blue-800 hover:underline flex items-center"
+                                                        >
+                                                            📄 {material.title}
+                                                        </a>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    )}
                                     
                                     <p className="text-sm text-gray-600  mb-6 line-clamp-2">
                                         {subtest.description || 'Belum ada deskripsi untuk subtes ini.'}

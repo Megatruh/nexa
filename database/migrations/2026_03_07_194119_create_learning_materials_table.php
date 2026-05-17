@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('subtest_id')->constrained('subtests')->onDelete('cascade');
             $table->string('title');
+            $table->text('description')->nullable();
             $table->enum('type',['materi', 'latsol']);
             $table->string('file_path');
             $table->timestamps();

@@ -233,11 +233,28 @@ class AdminController extends Controller
         return Inertia::render('Admin/StudyMaterials/Index');
     }
 
-    public function studyMaterialsStore(Request $request): RedirectResponse
-    {
-        return back()->with('success', 'Materi belajar berhasil ditambahkan.');
-    }
+public function studyMaterialsStore(Request $request)
+{
+    $request->validate([
+        'title' => 'required|string|max:255',
+        'type' => 'required|in:materi,latsol',
+        'subtest_id' => 'required|exists:subtests,id',
+        'file_path' => 'required|mimes:pdf|max:10000', // Pastikan validasi hanya menerima PDF
+    ]);
 
+    // Simpan file PDF ke folder storage/app/public/materials
+    $path = $request->file('file_path')->store('materials', 'public'); 
+
+    LearningMaterial::create([
+        'title' => $request->title,
+        'description' => $request->description,
+        'type' => $request->type,
+        'subtest_id' => $request->subtest_id,
+        'file_path' => $path, // Simpan lokasi path file ke database
+    ]);
+
+    return redirect()->back()->with('success', 'Materi PDF berhasil ditambahkan.');
+}
     public function studyMaterialsUpdate(Request $request, string $studyMaterial): RedirectResponse
     {
         return back()->with('success', 'Materi belajar berhasil diperbarui.');

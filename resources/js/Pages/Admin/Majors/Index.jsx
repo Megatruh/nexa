@@ -207,20 +207,22 @@ export default function MajorsIndex() {
 
             <div className="mx-auto w-full max-w-7xl px-4 pb-16 pt-10 sm:px-6 lg:px-8">
                 <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-                    <Link
-                        href={route('admin.dashboard')}
-                        className="text-sm text-indigo-200/80 hover:text-indigo-200"
-                    >
-                        ← Kembali ke Dashboard
-                    </Link>
                     <div>
-                        <h1 className="mt-2 text-3xl font-semibold text-white">
-                            Manajemen Data Jurusan
-                        </h1>
-                        <p className="mt-2 text-sm text-white/70">
-                            Data jurusan diambil dari fitur Ulasan Prodi yang sudah
-                            tersedia.
-                        </p>
+                        <Link
+                            href={route('admin.dashboard')}
+                            className="text-sm text-indigo-200/80 hover:text-indigo-200"
+                        >
+                            ← Kembali ke Dashboard
+                        </Link>
+                        <div>
+                            <h1 className="mt-2 text-3xl font-semibold text-white">
+                                Manajemen Data Jurusan
+                            </h1>
+                            <p className="mt-2 text-sm text-white/70">
+                                Data jurusan diambil dari fitur Ulasan Prodi yang sudah
+                                tersedia.
+                            </p>
+                        </div>
                     </div>
                     <button
                         onClick={openCreateModal}

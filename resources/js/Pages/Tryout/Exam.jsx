@@ -38,12 +38,12 @@ const ShieldCheckIcon = ({ className }) => (
     </svg>
 );
 
-// ─── OPTION BUTTON ────────────────────────────────────────────────────────────
+// ─── OPTION BUTTON — dark theme ───────────────────────────────────────────────
 
 const OptionButton = ({ letter, text, isSelected, onClick }) => {
-    const base = 'w-full flex items-start gap-4 p-4 rounded-xl border-2 text-left transition-all duration-150 group cursor-pointer';
-    const selected = 'border-blue-500 bg-blue-50 shadow-sm shadow-blue-100';
-    const unselected = 'border-gray-100 bg-white hover:border-blue-200 hover:bg-blue-50/40';
+    const base = 'w-full flex items-start gap-4 p-4 rounded-xl border text-left transition-all duration-150 group cursor-pointer';
+    const selected = 'border-indigo-400/70 bg-indigo-500/20 shadow-lg shadow-indigo-900/20';
+    const unselected = 'border-white/10 bg-white/5 hover:border-indigo-400/40 hover:bg-white/10';
 
     return (
         <button type="button" onClick={onClick} className={`${base} ${isSelected ? selected : unselected}`}>
@@ -51,28 +51,26 @@ const OptionButton = ({ letter, text, isSelected, onClick }) => {
                 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
                 transition-colors duration-150
                 ${isSelected
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-500 group-hover:bg-blue-100 group-hover:text-blue-600'}
+                    ? 'bg-indigo-500 text-white'
+                    : 'bg-white/10 text-white/60 group-hover:bg-indigo-500/30 group-hover:text-indigo-300'}
             `}>
                 {letter}
             </span>
-            <span
-                className={`pt-1 text-sm leading-relaxed ${isSelected ? 'text-blue-900 font-medium' : 'text-gray-700'}`}
-            >
+            <span className={`pt-1 text-sm leading-relaxed ${isSelected ? 'text-white font-medium' : 'text-white/80'}`}>
                 <Latex>{text || ''}</Latex>
             </span>
         </button>
     );
 };
 
-// ─── NOMOR SOAL BUTTON ────────────────────────────────────────────────────────
+// ─── NOMOR SOAL BUTTON — dark theme ──────────────────────────────────────────
 
 const NomorSoal = ({ nomor, status, onClick }) => {
     const styles = {
-        aktif:   'bg-blue-600 text-white ring-2 ring-blue-300 ring-offset-1',
-        dijawab: 'bg-emerald-500 text-white',
-        ragu:    'bg-amber-400 text-white',
-        belum:   'bg-gray-100 text-gray-500 hover:bg-gray-200',
+        aktif:   'bg-indigo-500 text-white ring-2 ring-indigo-300/50 ring-offset-1 ring-offset-transparent',
+        dijawab: 'bg-emerald-500/80 text-white',
+        ragu:    'bg-amber-400/80 text-white',
+        belum:   'bg-white/10 text-white/60 hover:bg-white/20',
     };
     return (
         <button
@@ -90,40 +88,66 @@ const NomorSoal = ({ nomor, status, onClick }) => {
 const SyncIndicator = ({ hasPending }) => (
     <span className={`
         flex items-center gap-1 text-[10px] font-medium transition-opacity duration-300
-        ${hasPending ? 'opacity-100 text-amber-500' : 'opacity-50 text-emerald-500'}
+        ${hasPending ? 'opacity-100 text-amber-400' : 'opacity-60 text-emerald-400'}
     `}>
         <span className={`w-1.5 h-1.5 rounded-full ${hasPending ? 'bg-amber-400 animate-pulse' : 'bg-emerald-400'}`} />
         {hasPending ? 'Menyimpan...' : 'Tersimpan'}
     </span>
 );
 
+// ─── QUESTION TEXT RENDERER ──────────────────────────────────────────────────
+// Splits stimulus text (before \n\n) from the actual question, rendering each
+// part with LaTeX support and inserting a visual separator between them.
+
+const QuestionRenderer = ({ text }) => {
+    if (!text) return null;
+
+    // Teks bacaan dipisahkan dari pertanyaan oleh \n\n
+    const parts = text.split('\n\n');
+
+    if (parts.length < 2) {
+        // Tidak ada pemisah — render sebagai teks tunggal
+        return (
+            <div className="text-white/90 leading-relaxed text-[15px]">
+                <Latex>{text}</Latex>
+            </div>
+        );
+    }
+
+    const stimulus = parts.slice(0, parts.length - 1).join('\n\n');
+    const question = parts[parts.length - 1];
+
+    return (
+        <div>
+            {/* Teks bacaan / stimulus */}
+            <div className="text-white/80 leading-relaxed text-[14px] bg-white/5 border border-white/10 rounded-xl p-4 whitespace-pre-line">
+                <Latex>{stimulus}</Latex>
+            </div>
+
+            {/* Pemisah */}
+            <hr className="my-4 border-white/10" />
+
+            {/* Pertanyaan */}
+            <div className="text-white/90 leading-relaxed text-[15px] font-medium">
+                <Latex>{question}</Latex>
+            </div>
+        </div>
+    );
+};
+
 // ─── MAIN EXAM COMPONENT ──────────────────────────────────────────────────────
 
-/**
- * Exam.jsx — Halaman ujian satu soal per halaman.
- *
- * ARSITEKTUR JAWABAN:
- *  1. Klik opsi → simpanJawaban() → update Zustand state INSTAN (UI responsif)
- *  2. Zustand mengirim ke server via axios debounce 800ms di background
- *  3. Navigasi antar soal via Inertia (ganti halaman) TANPA menunggu server
- *  4. Sebelum finish, flushPendingSync() memastikan semua jawaban terkirim
- *
- * KEAMANAN TIMER:
- *  - Nilai awal sisaWaktu dari server (bukan dari JS Date)
- *  - Server memvalidasi waktu saat storeAnswer & finishSubtest dipanggil
- *  - Memanipulasi JS timer dari DevTools tidak membantu: server tetap reject
- *    jawaban yang dikirim setelah durasi + toleransi 10 detik
- */
 export default function Exam({
     auth,
     session,
     subtest,
     sessionSubtest,
-    questions,        // LengthAwarePaginator Laravel (1 soal per page)
-    savedAnswer,      // Jawaban tersimpan untuk soal ini (dari DB)
-    allQuestionIds,   // Semua ID soal untuk navigasi nomor
-    allAnswers,       // { [questionId]: answer } — semua jawaban user di subtes ini
-    sisaWaktu,        // Sisa waktu (detik) — server-authoritative
+    questions,
+    savedAnswer,
+    allQuestionIds,
+    allAnswers,
+    allDoubtful,
+    sisaWaktu,
 }) {
     const question = questions?.data?.[0];
 
@@ -141,7 +165,6 @@ export default function Exam({
         _pendingSync,
     } = useTryoutStore();
 
-    // Derived values dari state reaktif (tidak memanggil fungsi store)
     const hasPendingSync = Object.keys(_pendingSync ?? {}).length > 0;
     const getFormattedTime = () => {
         const mins = Math.floor(waktuStore / 60);
@@ -149,26 +172,19 @@ export default function Exam({
         return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     };
 
-    // Ref untuk mencegah double-finish
     const isFinishing = useRef(false);
 
     // ─── Callback waktu habis ─────────────────────────────────────────────────
-    /**
-     * Dipanggil oleh timer saat waktu = 0.
-     * PENTING: gunakan handleFinishSubtest agar flushPendingSync dipanggil dulu.
-     */
     const handleTimeUp = useCallback(() => {
         handleFinishSubtest(true);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionSubtest.id]);
 
-    // ─── Init store saat pertama mount ────────────────────────────────────────
-    /**
-     * Dependency sengaja dikosongkan agar store tidak di-reset setiap Inertia
-     * partial-reload. Timer hanya dimulai sekali per mount komponen.
-     * allAnswers dan savedAnswer di-merge di dalam initSesi.
-     */
+    // ─── Init store ───────────────────────────────────────────────────────────
     useEffect(() => {
+        // Merge allDoubtful ke flagged di store
+        const doubtfulSet = new Set(allDoubtful ?? []);
+
         initSesi({
             soalList:    questions.data,
             allAnswers:  allAnswers ?? {},
@@ -177,21 +193,21 @@ export default function Exam({
             onTimeUp:    handleTimeUp,
             sessionId:   session.id,
         });
+
+        // Set flagged dari server setelah init
+        if (doubtfulSet.size > 0) {
+            useTryoutStore.setState({ flagged: doubtfulSet });
+        }
+
         startTimer();
 
         return () => stopTimer();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // ─── Sinkron jawaban dari server ke store saat navigasi ──────────────────
-    /**
-     * Setiap kali Inertia memuat halaman baru (soal baru), kita merge
-     * jawaban dari server ke state Zustand. Ini menjaga konsistensi jika
-     * user membuka tab baru atau browser di-refresh.
-     */
+    // ─── Sinkron jawaban dari server ke store ─────────────────────────────────
     useEffect(() => {
         if (savedAnswer?.answer && question?.id) {
-            // Hanya isi jika store belum punya jawaban lokal (lokal lebih fresh)
             const jawabanLokal = useTryoutStore.getState().jawaban[question.id];
             if (!jawabanLokal) {
                 simpanJawaban(question.id, savedAnswer.answer);
@@ -199,7 +215,7 @@ export default function Exam({
         }
     }, [savedAnswer, question?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // ─── Navigasi ke halaman soal tertentu ───────────────────────────────────
+    // ─── Navigasi ─────────────────────────────────────────────────────────────
     const goToPage = (page) => {
         router.get(
             route('tryout.subtest.show', {
@@ -207,37 +223,44 @@ export default function Exam({
                 subtest_id: subtest.id,
             }),
             { page },
-            {
-                preserveScroll: true,
-                preserveState: false,
-                // Tidak perlu menunggu server selesai sebelum navigasi
-                // karena jawaban dikirim secara background oleh Zustand
-            }
+            { preserveScroll: true, preserveState: false }
         );
     };
 
-    // ─── Simpan jawaban (lokal instan + background sync) ─────────────────────
+    // ─── Simpan jawaban ───────────────────────────────────────────────────────
     const handleAnswer = (choice) => {
         if (!question) return;
-        // Zustand menangani: update state lokal + debounce axios ke server
         simpanJawaban(question.id, choice);
     };
 
-    // ─── Selesaikan subtes dengan aman ───────────────────────────────────────
-    /**
-     * ALUR:
-     *  1. Konfirmasi (jika manual)
-     *  2. Hentikan timer agar tidak fire ganda
-     *  3. flushPendingSync() — paksa kirim semua jawaban yang pending
-     *  4. POST ke server untuk menandai subtes selesai
-     *
-     * @param {boolean} isAuto - true jika dipanggil oleh timer (waktu habis)
-     */
+    // ─── Selesaikan subtes (dengan validasi ragu-ragu) ────────────────────────
     const handleFinishSubtest = async (isAuto = false) => {
-        // Guard: cegah eksekusi ganda
         if (isFinishing.current) return;
 
         if (!isAuto) {
+            // ── Validasi ragu-ragu ─────────────────────────────────────────
+            const { flagged: currentFlagged } = useTryoutStore.getState();
+            const doubtfulIds = [...currentFlagged].filter(id =>
+                allQuestionIds.includes(id)
+            );
+
+            if (doubtfulIds.length > 0) {
+                // Cari nomor soal pertama yang masih ragu-ragu
+                const firstDoubtfulIndex = allQuestionIds.indexOf(doubtfulIds[0]);
+                const firstDoubtfulPage  = firstDoubtfulIndex + 1;
+
+                const goNow = window.confirm(
+                    `⚠️ Masih ada ${doubtfulIds.length} jawaban yang ragu-ragu.\n\n` +
+                    `Klik OK untuk langsung menuju soal ragu-ragu pertama (No. ${firstDoubtfulPage}), ` +
+                    `atau Batal untuk tetap di halaman ini.`
+                );
+
+                if (goNow) {
+                    goToPage(firstDoubtfulPage);
+                }
+                return; // Batalkan proses submit
+            }
+
             const confirmed = window.confirm(
                 'Yakin ingin mengakhiri subtes ini? Soal yang belum dijawab tidak akan dinilai.'
             );
@@ -248,12 +271,9 @@ export default function Exam({
         stopTimer();
 
         try {
-            // Flush semua jawaban pending sebelum finish
-            // Ini KRITIS: tanpa ini, jawaban terakhir bisa hilang
             await flushPendingSync();
         } catch (err) {
             console.error('[Exam] flushPendingSync error:', err);
-            // Tetap lanjut finish agar user tidak terjebak di halaman
         }
 
         router.post(
@@ -268,11 +288,11 @@ export default function Exam({
         );
     };
 
-    // ─── Guard: soal tidak ditemukan ─────────────────────────────────────────
+    // ─── Guard ────────────────────────────────────────────────────────────────
     if (!question) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-50">
-                <p className="text-gray-400 italic">Soal tidak ditemukan.</p>
+            <div className="flex items-center justify-center min-h-screen bg-space-dark">
+                <p className="text-white/40 italic">Soal tidak ditemukan.</p>
             </div>
         );
     }
@@ -281,6 +301,7 @@ export default function Exam({
     const jawabanSoalIni = jawaban[question.id] ?? null;
     const isFlagged      = flagged.has(question.id);
     const terjawab       = Object.values(jawaban).filter(Boolean).length;
+    const raguragu       = [...flagged].filter(id => allQuestionIds.includes(id)).length;
     const warningTimer   = waktuStore < 60;
     const formattedTime  = getFormattedTime();
     const pendingSync    = hasPendingSync;
@@ -300,37 +321,41 @@ export default function Exam({
             <Head title={`Ujian — ${subtest.name}`} />
 
             {/* ─── TOP BAR ─────────────────────────────────────────────── */}
-            <div className="sticky top-0 z-30 bg-white border-b border-gray-100 shadow-sm">
+            <div className="sticky top-0 z-30 bg-space-dark/80 backdrop-blur-md border-b border-white/10">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between gap-4">
 
                     {/* Nama Subtes + Security Badge */}
                     <div className="flex items-center gap-3 min-w-0">
-                        <span className="hidden sm:block w-2 h-5 bg-blue-500 rounded-full flex-shrink-0" />
-                        <h1 className="font-bold text-gray-800 truncate text-sm sm:text-base">
+                        <span className="hidden sm:block w-2 h-5 bg-indigo-500 rounded-full flex-shrink-0" />
+                        <h1 className="font-bold text-white truncate text-sm sm:text-base">
                             {subtest.name}
                         </h1>
-                        {/* Indikator bahwa timer diawasi server */}
-                        <span title="Waktu diverifikasi oleh server" className="hidden sm:flex items-center gap-1 text-[10px] text-gray-400">
+                        <span title="Waktu diverifikasi oleh server" className="hidden sm:flex items-center gap-1 text-[10px] text-white/30">
                             <ShieldCheckIcon className="w-3 h-3 text-emerald-400" />
                         </span>
                     </div>
 
-                    {/* Progress + Sync Indicator */}
-                    <div className="hidden md:flex items-center gap-3 text-xs text-gray-500">
+                    {/* Progress + Sync */}
+                    <div className="hidden md:flex items-center gap-3 text-xs text-white/50">
                         <SyncIndicator hasPending={pendingSync} />
                         <span>
-                            <span className="font-semibold text-emerald-600">{terjawab}</span>
+                            <span className="font-semibold text-emerald-400">{terjawab}</span>
                             {' / '}{allQuestionIds.length} dijawab
                         </span>
+                        {raguragu > 0 && (
+                            <span className="text-amber-400 font-semibold">
+                                {raguragu} ragu-ragu
+                            </span>
+                        )}
                     </div>
 
                     {/* Timer */}
                     <div className={`
                         flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-mono font-bold text-sm flex-shrink-0
-                        transition-colors duration-300
+                        border transition-colors duration-300
                         ${warningTimer
-                            ? 'bg-red-50 text-red-600 animate-pulse'
-                            : 'bg-gray-50 text-gray-700'}
+                            ? 'border-red-500/50 bg-red-500/20 text-red-400 animate-pulse'
+                            : 'border-white/10 bg-white/5 text-white/80'}
                     `}>
                         <ClockIcon className="w-4 h-4" />
                         {formattedTime}
@@ -339,21 +364,21 @@ export default function Exam({
             </div>
 
             {/* ─── MAIN LAYOUT ─────────────────────────────────────────── */}
-            <div className="min-h-[calc(100vh-3.5rem)] bg-gray-50 py-6">
+            <div className="min-h-[calc(100vh-3.5rem)] py-6">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col lg:flex-row gap-5">
 
                     {/* ══ PANEL SOAL (kiri) ══════════════════════════════ */}
                     <div className="flex-1 min-w-0">
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                        <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 overflow-hidden">
 
                             {/* Header nomor soal */}
-                            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-50 bg-gray-50/60">
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 bg-white/5">
                                 <div className="flex items-center gap-2">
-                                    <span className="w-8 h-8 bg-blue-600 text-white rounded-lg flex items-center justify-center text-sm font-bold">
+                                    <span className="w-8 h-8 bg-indigo-500 text-white rounded-lg flex items-center justify-center text-sm font-bold">
                                         {questions.current_page}
                                     </span>
-                                    <span className="text-sm text-gray-400">
-                                        dari <span className="font-semibold text-gray-600">{questions.total}</span> soal
+                                    <span className="text-sm text-white/50">
+                                        dari <span className="font-semibold text-white/80">{questions.total}</span> soal
                                     </span>
                                 </div>
 
@@ -363,10 +388,10 @@ export default function Exam({
                                     onClick={() => toggleFlag(question.id)}
                                     className={`
                                         flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
-                                        transition-colors duration-150
+                                        border transition-colors duration-150
                                         ${isFlagged
-                                            ? 'bg-amber-100 text-amber-700'
-                                            : 'bg-gray-100 text-gray-500 hover:bg-amber-50 hover:text-amber-600'}
+                                            ? 'bg-amber-400/20 border-amber-400/50 text-amber-300'
+                                            : 'bg-white/5 border-white/10 text-white/50 hover:bg-amber-400/10 hover:border-amber-400/30 hover:text-amber-300'}
                                     `}
                                 >
                                     <FlagIcon filled={isFlagged} className="w-3.5 h-3.5" />
@@ -377,7 +402,7 @@ export default function Exam({
                             {/* Gambar soal (opsional) */}
                             {question.question_image && (
                                 <div className="px-6 pt-6">
-                                    <div className="rounded-xl overflow-hidden border border-gray-100">
+                                    <div className="rounded-xl overflow-hidden border border-white/10">
                                         <img
                                             src={`/storage/${question.question_image}`}
                                             alt="Gambar Soal"
@@ -388,11 +413,9 @@ export default function Exam({
                                 </div>
                             )}
 
-                            {/* Teks soal — dengan dukungan LaTeX */}
+                            {/* Teks soal — dengan pemisah stimulus + LaTeX */}
                             <div className="px-6 pt-5 pb-4">
-                                <div className="text-gray-800 leading-relaxed text-[15px] prose prose-sm max-w-none">
-                                    <Latex>{question.question_text || ''}</Latex>
-                                </div>
+                                <QuestionRenderer text={question.question_text} />
                             </div>
 
                             {/* Pilihan jawaban */}
@@ -409,20 +432,20 @@ export default function Exam({
                             </div>
 
                             {/* Navigasi prev / next */}
-                            <div className="flex items-center justify-between px-6 py-4 border-t border-gray-50 bg-gray-50/40">
+                            <div className="flex items-center justify-between px-6 py-4 border-t border-white/10 bg-white/5">
                                 <button
                                     type="button"
                                     onClick={() => questions.prev_page_url && goToPage(questions.current_page - 1)}
                                     disabled={!questions.prev_page_url}
                                     className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold
-                                        bg-white border border-gray-200 text-gray-600
-                                        hover:bg-gray-50 hover:border-gray-300 transition-colors
+                                        bg-white/5 border border-white/10 text-white/70
+                                        hover:bg-white/10 hover:border-white/20 transition-colors
                                         disabled:opacity-30 disabled:cursor-not-allowed"
                                 >
                                     <ChevronLeft /> Sebelumnya
                                 </button>
 
-                                <span className="text-xs text-gray-400 hidden sm:block">
+                                <span className="text-xs text-white/30 hidden sm:block">
                                     {questions.current_page} / {questions.last_page}
                                 </span>
 
@@ -431,8 +454,8 @@ export default function Exam({
                                     onClick={() => questions.next_page_url && goToPage(questions.current_page + 1)}
                                     disabled={!questions.next_page_url}
                                     className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold
-                                        bg-blue-600 text-white
-                                        hover:bg-blue-700 transition-colors
+                                        bg-indigo-500/80 border border-indigo-400/40 text-white
+                                        hover:bg-indigo-500 transition-colors
                                         disabled:opacity-30 disabled:cursor-not-allowed"
                                 >
                                     Selanjutnya <ChevronRight />
@@ -443,9 +466,9 @@ export default function Exam({
 
                     {/* ══ PANEL SAMPING (kanan) ══════════════════════════ */}
                     <div className="w-full lg:w-72 flex-shrink-0">
-                        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sticky top-20">
+                        <div className="bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 p-5 sticky top-20">
 
-                            <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-4">
+                            <h3 className="text-[11px] font-bold uppercase tracking-widest text-white/40 mb-4">
                                 Navigasi Soal
                             </h3>
 
@@ -462,12 +485,12 @@ export default function Exam({
                             </div>
 
                             {/* Legenda */}
-                            <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-[11px] text-gray-500 mb-5 pb-5 border-b border-gray-50">
+                            <div className="flex flex-wrap gap-x-3 gap-y-1.5 text-[11px] text-white/40 mb-5 pb-5 border-b border-white/10">
                                 {[
-                                    { color: 'bg-blue-600',   label: 'Aktif' },
-                                    { color: 'bg-emerald-500', label: 'Dijawab' },
-                                    { color: 'bg-amber-400',  label: 'Ragu-ragu' },
-                                    { color: 'bg-gray-200',   label: 'Belum' },
+                                    { color: 'bg-indigo-500',   label: 'Aktif' },
+                                    { color: 'bg-emerald-500',  label: 'Dijawab' },
+                                    { color: 'bg-amber-400',    label: 'Ragu-ragu' },
+                                    { color: 'bg-white/20',     label: 'Belum' },
                                 ].map(({ color, label }) => (
                                     <span key={label} className="flex items-center gap-1">
                                         <span className={`w-2.5 h-2.5 rounded-sm ${color}`} />
@@ -477,23 +500,23 @@ export default function Exam({
                             </div>
 
                             {/* Ringkasan */}
-                            <div className="mb-5 space-y-1 text-sm">
-                                <div className="flex justify-between text-gray-500">
+                            <div className="mb-5 space-y-1.5 text-sm">
+                                <div className="flex justify-between text-white/50">
                                     <span>Dijawab</span>
-                                    <span className="font-semibold text-emerald-600">
+                                    <span className="font-semibold text-emerald-400">
                                         {terjawab} / {allQuestionIds.length}
                                     </span>
                                 </div>
-                                <div className="flex justify-between text-gray-500">
+                                <div className="flex justify-between text-white/50">
                                     <span>Belum dijawab</span>
-                                    <span className="font-semibold text-gray-700">
+                                    <span className="font-semibold text-white/70">
                                         {allQuestionIds.length - terjawab}
                                     </span>
                                 </div>
-                                {flagged.size > 0 && (
-                                    <div className="flex justify-between text-gray-500">
+                                {raguragu > 0 && (
+                                    <div className="flex justify-between text-white/50">
                                         <span>Ragu-ragu</span>
-                                        <span className="font-semibold text-amber-600">{flagged.size}</span>
+                                        <span className="font-semibold text-amber-400">{raguragu}</span>
                                     </div>
                                 )}
                                 {/* Mobile sync indicator */}
@@ -502,14 +525,23 @@ export default function Exam({
                                 </div>
                             </div>
 
+                            {/* Peringatan ragu-ragu */}
+                            {raguragu > 0 && (
+                                <div className="mb-4 p-3 rounded-xl bg-amber-400/10 border border-amber-400/30">
+                                    <p className="text-[11px] text-amber-300 font-medium">
+                                        ⚠️ {raguragu} soal masih ragu-ragu. Selesaikan sebelum submit!
+                                    </p>
+                                </div>
+                            )}
+
                             {/* Tombol selesai */}
                             <button
                                 type="button"
                                 onClick={() => handleFinishSubtest(false)}
                                 disabled={isFinishing.current}
                                 className="w-full py-3 rounded-xl text-sm font-bold
-                                    bg-red-50 text-red-600 border border-red-100
-                                    hover:bg-red-100 hover:border-red-200
+                                    bg-rose-500/20 border border-rose-500/40 text-rose-300
+                                    hover:bg-rose-500/30 hover:border-rose-400/60
                                     active:scale-[0.98] transition-all duration-150
                                     disabled:opacity-50 disabled:cursor-not-allowed"
                             >

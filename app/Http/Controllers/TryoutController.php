@@ -38,13 +38,21 @@ class TryoutController extends Controller
                 $finishedSession = TryoutSession::where('user_id', $user->id)
                     ->where('tryout_id', $tryout->id)
                     ->whereNotNull('finished_at')
+                    ->latest()
+                    ->first();
+
+                // Cek apakah ada sesi yang sedang berjalan (belum selesai)
+                $activeSession = TryoutSession::where('user_id', $user->id)
+                    ->where('tryout_id', $tryout->id)
+                    ->whereNull('finished_at')
+                    ->latest()
                     ->first();
 
                 $tryout->is_completed_by_user = (bool) $finishedSession;
+                $tryout->has_active_session   = (bool) $activeSession;
 
-                // Cek apakah ada batch yang lebih baru yang belum dikerjakan
-                // (untuk menentukan apakah tombol "Kerjakan" aktif)
-                $tryout->can_start = !$finishedSession;
+                // User selalu bisa mulai/mengulang tryout
+                $tryout->can_start = true;
 
                 return $tryout;
             });
@@ -105,13 +113,23 @@ class TryoutController extends Controller
         abort_if($subtest->tryout_id != $tryout_id, 404);
 
         // -- Sesi Tryout --
-        $session = TryoutSession::firstOrCreate(
-            ['user_id' => $user->id, 'tryout_id' => $tryout_id],
-            [
+        // Cek apakah ada sesi yang belum selesai (bisa dilanjutkan)
+        $session = TryoutSession::where('user_id', $user->id)
+            ->where('tryout_id', $tryout_id)
+            ->whereNull('finished_at')
+            ->latest()
+            ->first();
+
+        // Jika tidak ada sesi aktif, buat sesi baru
+        // (sesi lama yang sudah selesai dibiarkan sebagai riwayat)
+        if (!$session) {
+            $session = TryoutSession::create([
+                'user_id'          => $user->id,
+                'tryout_id'        => $tryout_id,
                 'started_at'       => now(),
                 'study_program_id' => $user->study_program_id ?? 1,
-            ]
-        );
+            ]);
+        }
 
         // -------------------------------------------------------
         //  VALIDASI URUTAN SUBTEST (Anti-skip)
@@ -310,13 +328,21 @@ class TryoutController extends Controller
 
         $user = Auth::user();
 
-        $session = TryoutSession::firstOrCreate(
-            ['user_id' => $user->id, 'tryout_id' => $request->tryout_id],
-            [
+        // Gunakan sesi yang belum selesai, atau buat baru (izinkan retry)
+        $session = TryoutSession::where('user_id', $user->id)
+            ->where('tryout_id', $request->tryout_id)
+            ->whereNull('finished_at')
+            ->latest()
+            ->first();
+
+        if (!$session) {
+            $session = TryoutSession::create([
+                'user_id'          => $user->id,
+                'tryout_id'        => $request->tryout_id,
                 'started_at'       => now(),
                 'study_program_id' => $user->study_program_id ?? 1,
-            ]
-        );
+            ]);
+        }
 
         $session->update([
             'choice_1_id' => $request->choice_1_id,

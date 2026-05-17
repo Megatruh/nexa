@@ -8,10 +8,12 @@ use App\Models\TryoutSession;
 use App\Models\TryoutSessionSubtest;
 use App\Models\TryoutAnswer;
 use App\Models\TryoutQuestion;
+use App\Models\StudyProgramDescription;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class TryoutController extends Controller
 {
@@ -23,24 +25,68 @@ class TryoutController extends Controller
     {
         $user = Auth::user();
 
+        // Ambil semua tryout aktif beserta info batch
         $activeTryouts = Tryout::where('is_active', true)
             ->withCount('subtests')
+            ->orderBy('batch', 'desc')
             ->get()
-            ->map(function ($tryout) {
+            ->map(function ($tryout) use ($user) {
                 $firstSubtest = $tryout->subtests()->orderBy('order', 'asc')->first();
                 $tryout->first_subtest_id = $firstSubtest?->id;
+
+                // Cek apakah user sudah punya sesi selesai di batch ini
+                $finishedSession = TryoutSession::where('user_id', $user->id)
+                    ->where('tryout_id', $tryout->id)
+                    ->whereNotNull('finished_at')
+                    ->first();
+
+                $tryout->is_completed_by_user = (bool) $finishedSession;
+
+                // Cek apakah ada batch yang lebih baru yang belum dikerjakan
+                // (untuk menentukan apakah tombol "Kerjakan" aktif)
+                $tryout->can_start = !$finishedSession;
+
                 return $tryout;
             });
 
-        $history = TryoutSession::with('tryout')
+        // Riwayat: SEMUA sesi user (termasuk yang belum selesai)
+        // Ini memperbaiki bug #4: sesi yang ditinggalkan sekarang muncul di riwayat
+        $history = TryoutSession::with(['tryout', 'choice1', 'choice2'])
             ->where('user_id', $user->id)
-            ->whereNotNull('finished_at')
             ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($session) {
+                // Tambah info status untuk frontend
+                $session->status = $session->finished_at ? 'selesai' : 'belum_selesai';
+
+                // Jika belum selesai, hitung progress
+                if (!$session->finished_at) {
+                    $totalSubtests = $session->tryout?->subtests()->count() ?? 0;
+                    $completedSubtests = $session->sessionSubtests()
+                        ->whereNotNull('finished_at')
+                        ->count();
+
+                    $lastSessionSubtest = $session->sessionSubtests()
+                        ->whereNull('finished_at')
+                        ->first();
+
+                    $session->completed_subtests = $completedSubtests;
+                    $session->total_subtests = $totalSubtests;
+                    $session->last_subtest_id = $lastSessionSubtest?->tryout_subtest_id;
+                }
+
+                return $session;
+            });
+
+        // Daftar prodi untuk pemilihan jurusan
+        $studyPrograms = StudyProgramDescription::select('id', 'name', 'passing_grade_min', 'passing_grade_max')
+            ->orderBy('name')
             ->get();
 
         return Inertia::render('Tryout/Index', [
-            'activeTryouts' => $activeTryouts,
-            'history'       => $history,
+            'activeTryouts'  => $activeTryouts,
+            'history'        => $history,
+            'studyPrograms'  => $studyPrograms,
         ]);
     }
 
@@ -50,12 +96,6 @@ class TryoutController extends Controller
 
     /**
      * GET /tryout/{tryout_id}/subtest/{subtest_id}
-     *
-     * URUTAN SOAL ACAK TAPI KONSISTEN:
-     * Soal diacak menggunakan SEED berbasis session->id, sehingga:
-     *  - Setiap user mendapat urutan acak yang berbeda
-     *  - Jika user refresh, urutan tetap SAMA (deterministik)
-     *  - Navigasi nomor soal konsisten
      */
     public function showSubtest(Request $request, $tryout_id, $subtest_id)
     {
@@ -73,6 +113,25 @@ class TryoutController extends Controller
             ]
         );
 
+        // -------------------------------------------------------
+        //  VALIDASI URUTAN SUBTEST (Anti-skip)
+        // -------------------------------------------------------
+        $previousSubtests = TryoutSubtest::where('tryout_id', $tryout_id)
+            ->where('order', '<', $subtest->order)
+            ->orderBy('order', 'asc')
+            ->get();
+
+        foreach ($previousSubtests as $prev) {
+            $prevSession = TryoutSessionSubtest::where('tryout_session_id', $session->id)
+                ->where('tryout_subtest_id', $prev->id)
+                ->first();
+
+            if (! $prevSession || ! $prevSession->finished_at) {
+                return redirect()->route('tryout.index')
+                    ->with('error', 'Selesaikan subtes sebelumnya terlebih dahulu sebelum melanjutkan.');
+            }
+        }
+
         // -- Sesi Subtes --
         $sessionSubtest = TryoutSessionSubtest::firstOrCreate(
             ['tryout_session_id' => $session->id, 'tryout_subtest_id' => $subtest->id],
@@ -89,22 +148,15 @@ class TryoutController extends Controller
         $terpakai    = now()->diffInSeconds($sessionSubtest->started_at);
         $sisaWaktu   = max(0, $durasiDetik - $terpakai);
 
+        // Pastikan sisaWaktu selalu integer (fix bug decimal)
+        $sisaWaktu = (int) floor($sisaWaktu);
+
         if ($sisaWaktu <= 0) {
             $sessionSubtest->update(['finished_at' => now()]);
             return $this->redirectToNextSubtest($subtest, $session->id);
         }
 
         // -- Soal diacak dengan SEED = session->id (deterministik per user) --
-        //
-        // Cara kerja:
-        //   1. Ambil SEMUA ID soal dalam subtes, diurutkan by ID (stabil)
-        //   2. Acak menggunakan seed dari session->id (PHP mt_srand / shuffle deterministik)
-        //   3. Ambil ID ke-N sesuai halaman yang diminta
-        //   4. Query soal berdasarkan ID tersebut
-        //
-        // Ini menggantikan ->inRandomOrder($session->id) yang tidak tersedia di semua
-        // versi Laravel dan berperilaku berbeda per DB engine.
-
         $allIdsSorted = $subtest->questions()->orderBy('id')->pluck('id')->toArray();
         $allIds       = $this->seededShuffle($allIdsSorted, $session->id);
 
@@ -112,38 +164,31 @@ class TryoutController extends Controller
         $total     = count($allIds);
         $currentId = $allIds[$page - 1] ?? null;
 
-        // Bangun paginator manual agar kompatibel dengan prop `questions` di Exam.jsx
-        $question    = $currentId ? TryoutQuestion::find($currentId) : null;
-        $questions   = new \Illuminate\Pagination\LengthAwarePaginator(
+        $question  = $currentId ? TryoutQuestion::find($currentId) : null;
+        $questions = new \Illuminate\Pagination\LengthAwarePaginator(
             $question ? [$question] : [],
             $total,
-            1,         // per page
+            1,
             $page,
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
-        // -- Jawaban tersimpan soal ini --
         $savedAnswer = $currentId
             ? TryoutAnswer::where('tryout_session_id', $session->id)
                 ->where('tryout_question_id', $currentId)
                 ->first()
             : null;
 
-        // -- Semua jawaban user di subtes ini (untuk navigasi warna) --
-        $allAnswers = TryoutAnswer::where('tryout_session_id', $session->id)
+        // Ambil semua jawaban + status is_doubtful untuk minimap
+        $allAnswersRaw = TryoutAnswer::where('tryout_session_id', $session->id)
             ->whereIn('tryout_question_id', $allIds)
-            ->pluck('answer', 'tryout_question_id');
+            ->get();
 
-        \Illuminate\Support\Facades\Log::info('TryoutController@showSubtest', [
-            'tryout_id' => $tryout_id,
-            'subtest_id' => $subtest_id,
-            'session_id' => $session->id,
-            'allIds_count' => count($allIds),
-            'page' => $page,
-            'currentId' => $currentId,
-            'question_found' => $question ? true : false,
-            'questions_json' => $questions->toJson(),
-        ]);
+        $allAnswers = $allAnswersRaw->pluck('answer', 'tryout_question_id');
+        $allDoubtful = $allAnswersRaw->where('is_doubtful', true)
+            ->pluck('tryout_question_id')
+            ->values()
+            ->toArray();
 
         return Inertia::render('Tryout/Exam', [
             'session'        => $session,
@@ -151,8 +196,9 @@ class TryoutController extends Controller
             'sessionSubtest' => $sessionSubtest,
             'questions'      => $questions,
             'savedAnswer'    => $savedAnswer,
-            'allQuestionIds' => $allIds, // Urutan acak yang konsisten
+            'allQuestionIds' => $allIds,
             'allAnswers'     => $allAnswers,
+            'allDoubtful'    => $allDoubtful,
             'sisaWaktu'      => $sisaWaktu,
         ]);
     }
@@ -170,44 +216,61 @@ class TryoutController extends Controller
             'is_doubtful'        => 'boolean',
         ]);
 
-        $session = TryoutSession::where('id', $request->tryout_session_id)
-            ->where('user_id', Auth::id())
-            ->firstOrFail();
+        return DB::transaction(function () use ($request) {
+            $session = TryoutSession::where('id', $request->tryout_session_id)
+                ->where('user_id', Auth::id())
+                ->firstOrFail();
 
-        // -- Validasi waktu server (anti-cheat) --
-        $question = TryoutQuestion::with('subtest')->find($request->tryout_question_id);
-        if ($question) {
-            $sessionSubtest = TryoutSessionSubtest::where('tryout_session_id', $session->id)
-                ->where('tryout_subtest_id', $question->tryout_subtest_id)
-                ->first();
+            // -- Validasi waktu server (anti-cheat, toleransi 2 detik) --
+            $question = TryoutQuestion::with('subtest')->find($request->tryout_question_id);
+            if ($question) {
+                $sessionSubtest = TryoutSessionSubtest::where('tryout_session_id', $session->id)
+                    ->where('tryout_subtest_id', $question->tryout_subtest_id)
+                    ->first();
 
-            if ($sessionSubtest) {
-                // Tolak jika subtes sudah ditandai selesai
-                if ($sessionSubtest->finished_at !== null) {
-                    return response()->json(['message' => 'Subtes telah selesai.'], 403);
-                }
+                if ($sessionSubtest) {
+                    if ($sessionSubtest->finished_at !== null) {
+                        return response()->json(['message' => 'Subtes telah selesai.'], 403);
+                    }
 
-                // Tolak jika durasi sudah habis (+ toleransi 10 detik untuk latency)
-                $durasiDetik = $question->subtest->duration * 60;
-                $terpakai    = now()->diffInSeconds($sessionSubtest->started_at);
-                if ($terpakai > ($durasiDetik + 10)) {
-                    return response()->json(['message' => 'Waktu subtes telah habis.'], 403);
+                    $durasiDetik = $question->subtest->duration * 60;
+                    $terpakai    = now()->diffInSeconds($sessionSubtest->started_at);
+
+                    if ($terpakai > ($durasiDetik + 2)) {
+                        $sessionSubtest->update(['finished_at' => now()]);
+
+                        Log::warning('TryoutController@storeAnswer: waktu habis, subtes ditutup paksa', [
+                            'user_id'            => Auth::id(),
+                            'session_id'         => $session->id,
+                            'session_subtest_id' => $sessionSubtest->id,
+                            'terpakai_detik'     => $terpakai,
+                            'durasi_detik'       => $durasiDetik,
+                        ]);
+
+                        return response()->json(['message' => 'Waktu habis, subtes ditutup.'], 403);
+                    }
                 }
             }
-        }
 
-        TryoutAnswer::updateOrCreate(
-            [
-                'tryout_session_id'  => $session->id,
-                'tryout_question_id' => $request->tryout_question_id,
-            ],
-            [
-                'answer'      => $request->answer ? strtoupper($request->answer) : null,
-                'is_doubtful' => $request->boolean('is_doubtful', false),
-            ]
-        );
+            $answer = TryoutAnswer::updateOrCreate(
+                [
+                    'tryout_session_id'  => $session->id,
+                    'tryout_question_id' => $request->tryout_question_id,
+                ],
+                [
+                    'answer'      => $request->answer ? strtoupper($request->answer) : null,
+                    'is_doubtful' => $request->boolean('is_doubtful', false),
+                ]
+            );
 
-        return response()->json(['success' => true]);
+            // Kembalikan data lengkap agar frontend bisa update state
+            return response()->json([
+                'success'     => true,
+                'answer'      => $answer->answer,
+                'is_doubtful' => $answer->is_doubtful,
+                'question_id' => $answer->tryout_question_id,
+            ]);
+        });
     }
 
     // =========================================================
@@ -216,23 +279,67 @@ class TryoutController extends Controller
 
     public function finishSubtest(Request $request, $session_subtest_id)
     {
-        $sessionSubtest = TryoutSessionSubtest::findOrFail($session_subtest_id);
+        return DB::transaction(function () use ($session_subtest_id) {
+            $sessionSubtest = TryoutSessionSubtest::findOrFail($session_subtest_id);
 
-        $session = TryoutSession::where('id', $sessionSubtest->tryout_session_id)
-            ->where('user_id', Auth::id())
-            ->firstOrFail();
+            $session = TryoutSession::where('id', $sessionSubtest->tryout_session_id)
+                ->where('user_id', Auth::id())
+                ->firstOrFail();
 
-        if (! $sessionSubtest->finished_at) {
-            $sessionSubtest->update(['finished_at' => now()]);
-        }
+            if (! $sessionSubtest->finished_at) {
+                $sessionSubtest->update(['finished_at' => now()]);
+            }
 
-        $currentSubtest = TryoutSubtest::find($sessionSubtest->tryout_subtest_id);
+            $currentSubtest = TryoutSubtest::find($sessionSubtest->tryout_subtest_id);
 
-        return $this->redirectToNextSubtest($currentSubtest, $session->id);
+            return $this->redirectToNextSubtest($currentSubtest, $session->id);
+        });
     }
 
     // =========================================================
-    //  5. SUBMIT EXAM AKHIR
+    //  5. SIMPAN PILIHAN JURUSAN (sebelum mulai tryout)
+    // =========================================================
+
+    public function storeChoices(Request $request)
+    {
+        $request->validate([
+            'tryout_id'   => 'required|exists:tryouts,id',
+            'choice_1_id' => 'required|exists:study_program_descriptions,id',
+            'choice_2_id' => 'required|exists:study_program_descriptions,id|different:choice_1_id',
+        ]);
+
+        $user = Auth::user();
+
+        $session = TryoutSession::firstOrCreate(
+            ['user_id' => $user->id, 'tryout_id' => $request->tryout_id],
+            [
+                'started_at'       => now(),
+                'study_program_id' => $user->study_program_id ?? 1,
+            ]
+        );
+
+        $session->update([
+            'choice_1_id' => $request->choice_1_id,
+            'choice_2_id' => $request->choice_2_id,
+        ]);
+
+        // Redirect ke subtest pertama
+        $tryout = Tryout::findOrFail($request->tryout_id);
+        $firstSubtest = $tryout->subtests()->orderBy('order', 'asc')->first();
+
+        if ($firstSubtest) {
+            return redirect()->route('tryout.subtest.show', [
+                'tryout_id'  => $tryout->id,
+                'subtest_id' => $firstSubtest->id,
+            ]);
+        }
+
+        return redirect()->route('tryout.index')
+            ->with('error', 'Tryout ini belum memiliki subtes.');
+    }
+
+    // =========================================================
+    //  6. SUBMIT EXAM AKHIR + KALKULASI PASSING GRADE
     // =========================================================
 
     public function submitExam(Request $request, $session_id)
@@ -258,7 +365,7 @@ class TryoutController extends Controller
                         ->where('tryout_question_id', $question->id)
                         ->first();
 
-                    if ($jawaban && strtoupper($jawaban->answer) === strtoupper($question->correct_answer)) {
+                    if ($jawaban && strtoupper($jawaban->answer ?? '') === strtoupper($question->correct_answer)) {
                         $subtestScore += $question->score_weight;
                     }
                 }
@@ -267,10 +374,35 @@ class TryoutController extends Controller
                 $totalScore += $subtestScore;
             }
 
+            // ─── LOGIKA KELULUSAN PASSING GRADE ──────────────────
+            $admissionStatus  = 'Tidak Lulus';
+            $admittedProgram  = null;
+
+            if ($session->choice_1_id) {
+                $choice1 = StudyProgramDescription::find($session->choice_1_id);
+                $choice2 = $session->choice_2_id
+                    ? StudyProgramDescription::find($session->choice_2_id)
+                    : null;
+
+                $passChoice1 = $choice1 && $this->checkPassingGrade($totalScore, $choice1);
+                $passChoice2 = $choice2 && $this->checkPassingGrade($totalScore, $choice2);
+
+                // Aturan: jika lulus di kedua jurusan, prioritaskan Pilihan 1
+                if ($passChoice1) {
+                    $admissionStatus = 'Lulus';
+                    $admittedProgram = $choice1->name;
+                } elseif ($passChoice2) {
+                    $admissionStatus = 'Lulus';
+                    $admittedProgram = $choice2->name;
+                }
+            }
+
             $session->update([
-                'finished_at'   => now(),
-                'total_score'   => $totalScore,
-                'score_details' => $scoreDetails,
+                'finished_at'      => now(),
+                'total_score'      => $totalScore,
+                'score_details'    => $scoreDetails,
+                'admission_status' => $admissionStatus,
+                'admitted_program' => $admittedProgram,
             ]);
         });
 
@@ -279,14 +411,30 @@ class TryoutController extends Controller
     }
 
     // =========================================================
-    //  6. HALAMAN HASIL
+    //  7. TUNDA EXAM (Simpan progress, izinkan navigasi)
+    // =========================================================
+
+    public function suspendExam(Request $request)
+    {
+        $request->validate([
+            'session_id' => 'required|exists:tryout_sessions,id',
+        ]);
+
+        // Jawaban sudah auto-saved melalui storeAnswer,
+        // jadi kita hanya perlu memberi respons OK.
+        // Sesi TIDAK ditandai finished_at sehingga bisa dilanjutkan.
+        return response()->json(['success' => true, 'message' => 'Progres tersimpan.']);
+    }
+
+    // =========================================================
+    //  8. HALAMAN HASIL
     // =========================================================
 
     public function showResult($session_id)
     {
         $session = TryoutSession::where('id', $session_id)
             ->where('user_id', Auth::id())
-            ->with(['tryout', 'answers.question'])
+            ->with(['tryout', 'answers.question', 'choice1', 'choice2'])
             ->firstOrFail();
 
         return Inertia::render('Tryout/Result', [
@@ -299,18 +447,31 @@ class TryoutController extends Controller
     // =========================================================
 
     /**
+     * Cek apakah skor memenuhi passing grade program studi.
+     * Menggunakan passing_grade_min sebagai batas bawah.
+     */
+    private function checkPassingGrade(int $score, StudyProgramDescription $program): bool
+    {
+        // Jika ada passing_grade_min numerik, gunakan itu
+        if ($program->passing_grade_min !== null) {
+            return $score >= $program->passing_grade_min;
+        }
+
+        // Fallback: parse passing_grade string (misal: "650" atau "650-700")
+        if ($program->passing_grade) {
+            $pgValue = (float) preg_replace('/[^0-9.]/', '', $program->passing_grade);
+            return $pgValue > 0 && $score >= $pgValue;
+        }
+
+        // Jika tidak ada passing grade, anggap lulus
+        return true;
+    }
+
+    /**
      * Acak array menggunakan seed deterministik.
-     * Soal yang sama akan selalu muncul dalam urutan yang sama
-     * untuk session yang sama, bahkan setelah refresh.
-     *
-     * @param  array   $ids
-     * @param  int     $seed  - tryout_session->id
-     * @return array
      */
     private function seededShuffle(array $ids, int $seed): array
     {
-        // Simpan state RNG global agar tidak mengacaukan fungsi lain
-        $state = mt_rand(); // baca state saat ini (tidak dipakai, hanya placeholder)
         mt_srand($seed);
 
         $count = count($ids);
@@ -319,7 +480,6 @@ class TryoutController extends Controller
             [$ids[$i], $ids[$j]] = [$ids[$j], $ids[$i]];
         }
 
-        // Reset ke seed acak agar tidak mempengaruhi operasi lain
         mt_srand();
 
         return $ids;
@@ -327,6 +487,9 @@ class TryoutController extends Controller
 
     /**
      * Cari subtes selanjutnya; jika tidak ada → submit & tampilkan hasil.
+     *
+     * FIX: Menggunakan redirect ke GET route (tryout.index) dengan auto-submit
+     * alih-alih redirect ke POST route yang tidak bisa di-redirect.
      */
     private function redirectToNextSubtest(TryoutSubtest $currentSubtest, ?int $sessionId = null)
     {
@@ -342,8 +505,65 @@ class TryoutController extends Controller
             ]);
         }
 
+        // Semua subtest selesai — auto-submit skor
         if ($sessionId) {
-            return redirect()->route('tryout.exam.submit', $sessionId);
+            $session = TryoutSession::with('tryout.subtests.questions')->find($sessionId);
+
+            if ($session && !$session->finished_at) {
+                DB::transaction(function () use ($session) {
+                    $totalScore   = 0;
+                    $scoreDetails = [];
+
+                    foreach ($session->tryout->subtests as $subtest) {
+                        $subtestScore = 0;
+
+                        foreach ($subtest->questions as $question) {
+                            $jawaban = TryoutAnswer::where('tryout_session_id', $session->id)
+                                ->where('tryout_question_id', $question->id)
+                                ->first();
+
+                            if ($jawaban && strtoupper($jawaban->answer ?? '') === strtoupper($question->correct_answer)) {
+                                $subtestScore += $question->score_weight;
+                            }
+                        }
+
+                        $scoreDetails[$subtest->name] = $subtestScore;
+                        $totalScore += $subtestScore;
+                    }
+
+                    // Logika kelulusan
+                    $admissionStatus = 'Tidak Lulus';
+                    $admittedProgram = null;
+
+                    if ($session->choice_1_id) {
+                        $choice1 = StudyProgramDescription::find($session->choice_1_id);
+                        $choice2 = $session->choice_2_id
+                            ? StudyProgramDescription::find($session->choice_2_id)
+                            : null;
+
+                        $passChoice1 = $choice1 && $this->checkPassingGrade($totalScore, $choice1);
+                        $passChoice2 = $choice2 && $this->checkPassingGrade($totalScore, $choice2);
+
+                        if ($passChoice1) {
+                            $admissionStatus = 'Lulus';
+                            $admittedProgram = $choice1->name;
+                        } elseif ($passChoice2) {
+                            $admissionStatus = 'Lulus';
+                            $admittedProgram = $choice2->name;
+                        }
+                    }
+
+                    $session->update([
+                        'finished_at'      => now(),
+                        'total_score'      => $totalScore,
+                        'score_details'    => $scoreDetails,
+                        'admission_status' => $admissionStatus,
+                        'admitted_program' => $admittedProgram,
+                    ]);
+                });
+            }
+
+            return redirect()->route('tryout.result', $sessionId);
         }
 
         return redirect()->route('tryout.index')->with('success', 'Semua subtes selesai!');

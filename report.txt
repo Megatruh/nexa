@@ -1,0 +1,849 @@
+================================================================================
+                    LAPORAN ANALISIS FITUR TRYOUT - NEXA
+                        Proyek Sistem Informasi - SNBT
+================================================================================
+
+Tanggal Analisis: 16 Mei 2026
+Analis: GitHub Copilot
+Status: Identifikasi Bug & Issue dalam Implementasi Tryout oleh Hapis
+
+================================================================================
+1. RINGKASAN EKSEKUTIF
+================================================================================
+
+Fitur tryout sudah dalam tahap pengembangan lanjutan dengan struktur database
+dan logika dasar yang solid. Namun, ditemukan TOTAL 14 BUG & ISSUE yang perlu
+diperbaiki, mulai dari kritis hingga minor.
+
+Status Implementasi:
+  ✅ Models (6 files): Lengkap dengan relasi yang baik
+  ✅ Controller: Lengkap dengan validasi server-side
+  ⚠️  Migrations (6 files): Ada 1 bug kritis (table name typo)
+  ✅ Routes: Lengkap tetapi ada duplikasi
+  ⚠️  Views: Menggunakan Inertia.js (tidak dalam blade templates)
+  ❌ Factories: TryoutSessionFactory kosong
+  ⚠️  Seeders: TryoutBatch1Seeder lengkap, TryoutSessionSeeder kosong
+  ❌ Tests: Tidak ada test resmi, hanya script manual
+
+================================================================================
+2. BUG YANG DITEMUKAN (BERDASARKAN LAPORAN USER)
+================================================================================
+
+2.1 BUG #1: SIMPAN JAWABAN UNTUK SOAL YANG SUDAH DIJAWAB
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Lokasi: app/Http/Controllers/TryoutController.php (line 197-229)
+         app/Models/TryoutAnswer.php
+
+Deskripsi:
+  - Jawaban BERHASIL disimpan menggunakan updateOrCreate() yang seharusnya bekerja
+  - TETAPI ada masalah dalam fillable array TryoutAnswer model:
+    * 'id' termasuk dalam fillable (SECURITY RISK!)
+    * 'is_doubtful' TIDAK ada dalam fillable (meski digunakan di controller)
+    * Kolom 'discussion' juga bermasalah di TryoutQuestion
+
+Dampak:
+  - Pengguna tidak bisa menandai jawaban sebagai "ragu-ragu"
+  - Potensi mass assignment vulnerability
+  - Beberapa jawaban mungkin tidak tersimpan dengan atribut lengkap
+
+Solusi:
+  1. Perbaiki TryoutAnswer.php fillable array:
+     ```php
+     protected $fillable = [
+         'tryout_session_id',
+         'tryout_question_id',
+         'answer',
+         'is_doubtful'  // TAMBAHKAN INI
+     ];
+     ```
+     HAPUS 'id' dari fillable
+
+  2. Perbaiki TryoutQuestion.php fillable array:
+     ```php
+     protected $fillable = [
+         'tryout_subtest_id',
+         'question_text',
+         'question_image',
+         'option_a',
+         'option_b',
+         'option_c',
+         'option_d',
+         'option_e',
+         'correct_answer',
+         'score_weight',
+         'discussion'  // TAMBAHKAN INI
+     ];
+     ```
+
+  3. Aktifkan fitur is_doubtful di migration:
+     ```php
+     // Di 2026_04_25_141107_create_tryout_answers_table.php
+     // Ganti baris yang dikomment menjadi aktif:
+     $table->boolean('is_doubtful')->default(false);
+     ```
+
+  4. Perbaiki TryoutSessionSubtest fillable (jangan include 'id'):
+     ```php
+     protected $fillable = [
+         'tryout_session_id',
+         'tryout_subtest_id',
+         'started_at',
+         'finished_at'
+     ];
+     ```
+
+
+2.2 BUG #2: RANDOM SUBTEST KETIKA MULAI TRYOUT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Lokasi: app/Http/Controllers/TryoutController.php (line 74-100)
+        routes/web.php (line 58)
+
+Deskripsi:
+  - Pengguna SEHARUSNYA mulai dari subtest pertama (Penalaran Umum)
+  - TETAPI tidak ada validasi untuk memastikan user mulai dari subtest order=1
+  - User bisa langsung akses subtest manapun tanpa urutan yang benar
+  - Beberapa sistem SNBT mengharuskan urutan fixed: Penalaran → PPU → PKU → Lit.Indo → Lit.Inggris
+
+Dampak:
+  - User bisa skip subtest tertentu
+  - Score mungkin tidak representatif (banyak istirahat antara subtes)
+  - Waktu tidak konsisten jika user lompat-lompat
+
+Solusi:
+  1. Tambahkan validasi di showSubtest():
+     ```php
+     public function showSubtest(Request $request, $tryout_id, $subtest_id)
+     {
+         $user    = Auth::user();
+         $subtest = TryoutSubtest::with('tryout')->findOrFail($subtest_id);
+         
+         abort_if($subtest->tryout_id != $tryout_id, 404);
+         
+         // VALIDASI URUTAN SUBTEST
+         $previousSubtest = TryoutSubtest::where('tryout_id', $tryout_id)
+             ->where('order', '<', $subtest->order)
+             ->whereNotIn('id', function ($q) use ($user, $tryout_id) {
+                 $q->select('tryout_subtest_id')
+                   ->from('tryout_session_subtests')
+                   ->whereIn('tryout_session_id', function ($q2) use ($user, $tryout_id) {
+                       $q2->select('id')
+                          ->from('tryout_sessions')
+                          ->where('user_id', $user->id)
+                          ->where('tryout_id', $tryout_id);
+                   })
+                   ->whereNotNull('finished_at');
+             })
+             ->exists();
+         
+         if ($previousSubtest) {
+             return redirect()->route('tryout.index')
+                 ->with('error', 'Anda harus menyelesaikan subtes sebelumnya terlebih dahulu.');
+         }
+         
+         // ... rest of the code
+     }
+     ```
+
+
+2.3 BUG #3: MANAJEMEN WAKTU (TIME MANAGEMENT ISSUES)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Lokasi: app/Http/Controllers/TryoutController.php (line 102-115, 194-210)
+
+Deskripsi:
+  - Waktu dihitung berdasarkan TryoutSessionSubtest->started_at
+  - MASALAH UMUM yang ditemukan:
+    1. Tidak ada mekanisme auto-submit ketika waktu habis
+    2. Timer hannya di frontend (JavaScript) - bisa di-bypass dengan DevTools
+    3. Toleransi 10 detik terlalu besar untuk anti-cheat
+    4. Tidak ada log untuk "expired session"
+    5. Jika user refresh saat waktu habis, status subtest tidak otomatis finished
+
+Dampak:
+  - User bisa terus menjawab walau waktu sudah habis
+  - Tidak ada mekanisme paksa selesai ketika durasi habis
+  - Timer frontend bisa dimanipulasi
+
+Solusi:
+  1. Tambahkan mekanisme server-side auto-submit:
+     ```php
+     // Di storeAnswer(), tambahkan pengecekan otomatis:
+     if ($terpakai > ($durasiDetik + 10)) {
+         // Auto-mark as finished
+         $sessionSubtest->update(['finished_at' => now()]);
+         
+         // Log untuk audit
+         \Log::warning('Auto-finish subtest due to time expiry', [
+             'session_id' => $session->id,
+             'subtest_id' => $question->tryout_subtest_id,
+             'time_used' => $terpakai,
+             'duration' => $durasiDetik
+         ]);
+         
+         return response()->json(['message' => 'Waktu habis, subtes ditutup.'], 403);
+     }
+     ```
+
+  2. Kurangi toleransi dari 10 detik menjadi 5 detik atau 2 detik
+  
+  3. Tambahkan background job (Laravel Queue) untuk auto-submit:
+     ```php
+     // Create job untuk setiap session_subtest:
+     StartAutofinisingJob::dispatch($sessionSubtest)->delay(now()->addMinutes($subtest->duration));
+     ```
+
+  4. Tambahkan validasi di showSubtest() untuk subtest yang sudah expired:
+     ```php
+     if ($sisaWaktu <= 0 && !$sessionSubtest->finished_at) {
+         $sessionSubtest->update(['finished_at' => now()]);
+     }
+     ```
+
+  5. Tambahkan log timestamps lengkap:
+     ```php
+     protected $fillable = [
+         'tryout_session_id',
+         'tryout_subtest_id',
+         'started_at',
+         'finished_at',
+         'auto_finished_at'  // Jika auto-submit
+     ];
+     ```
+
+
+2.4 BUG #4: TAMPILKAN SESI YANG BELUM SELESAI
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Lokasi: app/Http/Controllers/TryoutController.php (line 24-37)
+
+Deskripsi:
+  - Di method index(), HANYA menampilkan sesi yang sudah selesai:
+    ```php
+    $history = TryoutSession::with('tryout')
+        ->where('user_id', $user->id)
+        ->whereNotNull('finished_at')  // ← HANYA YANG SELESAI
+        ->orderBy('created_at', 'desc')
+        ->get();
+    ```
+  
+  - User yang sedang mengerjakan tryout tidak bisa melihat status mereka
+  - Tidak ada cara user tahu tryout mana yang belum diselesaikan
+
+Dampak:
+  - UX buruk: user lupa di subtest mana mereka terakhir
+  - Tidak ada resumption screen yang jelas
+  - User mungkin membuat session baru (duplikasi)
+
+Solusi:
+  ```php
+  public function index()
+  {
+      $user = Auth::user();
+
+      $activeTryouts = Tryout::where('is_active', true)
+          ->withCount('subtests')
+          ->get()
+          ->map(function ($tryout) {
+              $firstSubtest = $tryout->subtests()->orderBy('order', 'asc')->first();
+              $tryout->first_subtest_id = $firstSubtest?->id;
+              return $tryout;
+          });
+
+      // PERBAIKI: Tampilkan SEMUA sesi termasuk yang belum selesai
+      $activeSessions = TryoutSession::with('tryout')
+          ->where('user_id', $user->id)
+          ->whereNull('finished_at')  // Sedang berjalan
+          ->orderBy('created_at', 'desc')
+          ->get();
+      
+      // Tentukan subtest mana yang terakhir dibuka
+      $activeSessions->each(function ($session) {
+          $lastSubtest = TryoutSessionSubtest::where('tryout_session_id', $session->id)
+              ->orderBy('created_at', 'desc')
+              ->first();
+          $session->last_subtest_id = $lastSubtest?->tryout_subtest_id;
+          $session->is_completed = count(
+              $session->sessionSubtests()->whereNotNull('finished_at')->get()
+          );
+          $session->total_subtests = count($session->sessionSubtests);
+      });
+
+      $history = TryoutSession::with('tryout')
+          ->where('user_id', $user->id)
+          ->whereNotNull('finished_at')  // Selesai
+          ->orderBy('created_at', 'desc')
+          ->get();
+
+      return Inertia::render('Tryout/Index', [
+          'activeTryouts'   => $activeTryouts,
+          'activeSessions'  => $activeSessions,  // TAMBAHKAN INI
+          'history'         => $history,
+      ]);
+  }
+  ```
+  
+  Frontend harus menampilkan "Resume Tryout" button untuk active sessions.
+
+
+================================================================================
+3. BUG TAMBAHAN YANG DITEMUKAN (SELAIN USER-REPORTED)
+================================================================================
+
+3.1 BUG #5: MIGRATION BUG - TYPO TABLE NAME (CRITICAL)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Lokasi: database/migrations/2026_04_25_141107_create_tryout_answers_table.php
+        Line: 31
+
+Kode Bermasalah:
+  ```php
+  public function down(): void
+  {
+      Schema::dropIfExists('table_tryout_answers');  // ← TYPO! 'table_' prefix
+  }
+  ```
+
+Dampak:
+  - Jika migration di-rollback, akan error
+  - Table 'table_tryout_answers' tidak ada, jadi tidak bisa dihapus
+  - Database jadi inconsistent
+
+Solusi:
+  ```php
+  public function down(): void
+  {
+      Schema::dropIfExists('tryout_answers');  // Hapus prefix 'table_'
+  }
+  ```
+
+
+3.2 BUG #6: ROUTE DUPLICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Lokasi: routes/web.php
+        Lines 48-56 (di dalam middleware 'user')
+        Lines 107-125 (global dengan middleware 'auth', 'verified')
+
+Deskripsi:
+  - Rute tryout didefinisikan DUA KALI
+  - Definisi pertama terbatas hanya user role
+  - Definisi kedua bersifat global untuk semua yang verified
+  - Ini akan menyebabkan routing ambiguity
+
+Dampak:
+  - Konflik rute yang tidak terduga
+  - Request mungkin di-handle oleh rute yang salah
+  - Debugging jadi sulit
+
+Solusi:
+  HAPUS duplikasi. Keep hanya yang comprehensive (lines 107-125).
+  Verifikasi: rute `/tryout/answer` dan `/tryout/subtest/{id}/finish` HANYA 
+  ada sekali di route definition.
+
+
+3.3 BUG #7: EMPTY FACTORY (INCOMPLETE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Lokasi: database/factories/TryoutSessionFactory.php
+
+Deskripsi:
+  - Factory untuk membuat TryoutSession dummy KOSONG
+  - Hanya ada skeleton tanpa data
+
+Dampak:
+  - Tidak bisa membuat test data dengan mudah
+  - Seeding & testing jadi lebih kompleks
+
+Solusi:
+  ```php
+  public function definition(): array
+  {
+      return [
+          'user_id'          => User::factory(),
+          'tryout_id'        => Tryout::factory(),
+          'study_program_id' => StudyProgram::first()?->id ?? 1,
+          'started_at'       => now(),
+          'finished_at'      => null,
+          'total_score'      => null,
+          'score_details'    => null,
+      ];
+  }
+  ```
+
+
+3.4 BUG #8: EMPTY SEEDER (INCOMPLETE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Lokasi: database/seeders/TryoutSessionSeeder.php
+
+Deskripsi:
+  - Seeder untuk membuat dummy TryoutSession KOSONG
+  - Tidak ada implementasi
+
+Dampak:
+  - Tidak bisa seeding data session
+  - Testing jadi manual
+
+Solusi:
+  Implementasikan seeder sesuai kebutuhan test case.
+
+
+3.5 BUG #9: ADMIN PANEL INCOMPLETE (STUB ROUTES)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Lokasi: routes/web.php (line 95-99)
+        app/Http/Controllers/AdminController.php
+
+Deskripsi:
+  - Rute admin untuk tryout management ada tapi method di-controller TIDAK IMPLEMENTED
+  - Routes:
+    * GET /admin/tryouts → tryoutsIndex()
+    * POST /admin/tryouts → tryoutsStore()
+    * PUT /admin/tryouts/{id} → tryoutsUpdate()
+    * DELETE /admin/tryouts/{id} → tryoutsDestroy()
+
+Dampak:
+  - Admin tidak bisa manage tryout dari dashboard
+  - Rute akan 404 atau error
+
+Solusi:
+  Implementasikan 4 method di AdminController untuk CRUD tryout.
+  (Ini fitur yang belum dikerjakan Hapis, marked "TODO")
+
+
+3.6 BUG #10: is_doubtful FEATURE INCOMPLETE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Lokasi: database/migrations/2026_04_25_141107_create_tryout_answers_table.php
+        app/Http/Controllers/TryoutController.php (line 228)
+        app/Models/TryoutAnswer.php
+
+Deskripsi:
+  - Migration punya kode commented:
+    ```php
+    //$table->boolean('is_doubtful')->default(false); // Fitur ragu-ragu
+    ```
+  
+  - Controller mencoba gunakan:
+    ```php
+    'is_doubtful' => $request->boolean('is_doubtful', false),
+    ```
+  
+  - Model tidak include di fillable array
+
+Dampak:
+  - Fitur "Ragu-ragu" tidak berfungsi
+  - Server akan ignore is_doubtful dari request
+
+Solusi:
+  1. Uncomment & migrate:
+     ```php
+     $table->boolean('is_doubtful')->default(false);
+     ```
+  
+  2. Update TryoutAnswer model fillable:
+     ```php
+     protected $fillable = [
+         'tryout_session_id',
+         'tryout_question_id',
+         'answer',
+         'is_doubtful'
+     ];
+     ```
+
+
+3.7 BUG #11: MASS ASSIGNMENT SECURITY ISSUES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Lokasi: Multiple models
+
+Deskripsi:
+  - Beberapa model include 'id' dalam fillable array (SECURITY RISK):
+    * TryoutAnswer.php line 7: 'id' dalam fillable
+    * TryoutSessionSubtest.php line 7: 'id' dalam fillable
+  
+  - Ini memungkinkan mass-assignment vulnerability
+
+Dampak:
+  - User bisa manipulate ID saat CRUD
+  - Potential data integrity issues
+
+Solusi:
+  HAPUS 'id' dari semua fillable arrays:
+  - TryoutAnswer.php
+  - TryoutSessionSubtest.php
+
+
+3.8 BUG #12: MISSING 'discussion' IN FILLABLE (TryoutQuestion)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Lokasi: app/Models/TryoutQuestion.php
+
+Deskripsi:
+  - Migration punya kolom 'discussion' (nullable)
+  - Model fillable TIDAK include 'discussion'
+  - Seeder mencoba assign discussion saat import CSV
+
+Dampak:
+  - Discussion field tidak bisa di-mass-assign
+  - Data pembahasan soal dari CSV tidak tersimpan
+
+Solusi:
+  Tambahkan ke fillable:
+  ```php
+  protected $fillable = [
+      'tryout_subtest_id',
+      'question_text',
+      'question_image',
+      'option_a',
+      'option_b',
+      'option_c',
+      'option_d',
+      'option_e',
+      'correct_answer',
+      'score_weight',
+      'discussion'  // TAMBAHKAN INI
+  ];
+  ```
+
+
+3.9 BUG #13: POTENTIAL DUPLICATE SESSION CREATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Lokasi: app/Http/Controllers/TryoutController.php (line 73-78)
+
+Deskripsi:
+  ```php
+  $session = TryoutSession::firstOrCreate(
+      ['user_id' => $user->id, 'tryout_id' => $tryout_id],
+      ['started_at' => now(), 'study_program_id' => $user->study_program_id ?? 1]
+  );
+  ```
+  
+  - Jika user akses 2 subtest SECARA BERSAMAAN (race condition), bisa terbuat 2 session
+  - firstOrCreate tidak atomic di semua kasus
+
+Dampak:
+  - Data session duplikat
+  - Score calculation bisa salah
+  - Inconsistent state
+
+Solusi (Minor):
+  Gunakan atomic lock atau transaction:
+  ```php
+  $session = DB::transaction(function () use ($user, $tryout_id) {
+      return TryoutSession::firstOrCreate(
+          ['user_id' => $user->id, 'tryout_id' => $tryout_id],
+          ['started_at' => now(), 'study_program_id' => $user->study_program_id ?? 1]
+      );
+  });
+  ```
+
+
+3.10 BUG #14: INCONSISTENT RELATIONSHIP NAMING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Lokasi: app/Models/TryoutSessionSubtest.php vs Codependencies
+
+Deskripsi:
+  - Model TryoutSessionSubtest punya method:
+    ```php
+    public function tryoutSubtest()
+    ```
+  
+  - Tapi di controller & seeded tidak konsisten dengan naming convention
+  - Laravel convention: relationship name harus match dengan FK name 'tryout_subtest'
+
+Dampak:
+  - Potential confusion saat development
+  - Inconsistent dengan laravel convention
+
+Solusi (Minor):
+  Ubah method name menjadi:
+  ```php
+  public function subtest()  // Lebih singkat sesuai convention
+  {
+      return $this->belongsTo(TryoutSubtest::class, 'tryout_subtest_id');
+  }
+  ```
+
+
+================================================================================
+4. NO TEST COVERAGE
+================================================================================
+
+Lokasi: /tests folder
+
+Deskripsi:
+  - TIDAK ADA Pest/PHPUnit test untuk tryout feature
+  - Hanya ada manual test scripts:
+    * test_tryout.php - Test seededShuffle() function
+    * test_paginator.php - Test pagination
+    * check.php - Data validation
+
+Dampak:
+  - Tidak bisa detect regression
+  - Sulit maintain code
+  - Tidak confident dengan deployment
+
+Solusi:
+  Buat test suite:
+  1. Feature Test: tryout flow (start → answer → submit)
+  2. Unit Test: seededShuffle() deterministik
+  3. Unit Test: score calculation
+  4. Feature Test: time validation
+  5. Feature Test: answer saving & retrieval
+
+
+================================================================================
+5. PERUBAHAN YANG HAPIS LAKUKAN (SUMMARY)
+================================================================================
+
+Berdasarkan analisis struktur & kode, berikut adalah perubahan yang Hapis 
+implementasikan:
+
+✅ SELESAI:
+  1. Create 6 Models dengan relasi yang lengkap
+     - Tryout, TryoutSubtest, TryoutQuestion, TryoutSession, 
+       TryoutSessionSubtest, TryoutAnswer
+  
+  2. Create 6 Migrations dengan foreign keys & constraints
+  
+  3. Create TryoutController dengan 6 methods utama:
+     - index() - Daftar & history
+     - showSubtest() - Tampilkan soal dengan deterministic shuffle
+     - storeAnswer() - Auto-save jawaban dengan validasi server-side
+     - finishSubtest() - Mark subtest complete
+     - submitExam() - Calculate final score
+     - showResult() - Tampilkan hasil
+  
+  4. Create User routes untuk tryout (6 endpoint)
+  
+  5. Implement deterministic seeded shuffle untuk question order
+  
+  6. Create server-side time validation & anti-cheat mechanism
+  
+  7. Create CSV seeder (TryoutBatch1Seeder) dengan UTF-8 support
+  
+  8. Create unique constraint pada tryout_answers
+
+⏳ BELUM SELESAI / INCOMPLETE:
+  1. TryoutSessionFactory (kosong)
+  2. TryoutSessionSeeder (kosong)
+  3. Admin tryout management (routes ada, methods tidak)
+  4. is_doubtful feature (commented out)
+  5. Display incomplete sessions in user index
+  6. Validation untuk subtest ordering
+  7. Auto-submit mechanism ketika waktu habis
+  8. Test coverage (0 official tests)
+  9. Resume tryout functionality yang clear
+
+
+================================================================================
+6. REKOMENDASI PRIORITAS PERBAIKAN
+================================================================================
+
+CRITICAL (Harus diperbaiki segera):
+  ☐ BUG #5: Migration table name typo (akan error saat rollback)
+  ☐ BUG #1: Fillable array issues (security & functionality)
+  ☐ BUG #4: Tampilkan incomplete sessions (UX critical)
+  ☐ BUG #2: Validate subtest order (prevent cheating)
+
+HIGH PRIORITY (Penting):
+  ☐ BUG #3: Auto-submit ketika waktu habis (functional requirement)
+  ☐ BUG #9: Atomic session creation (race condition)
+  ☐ BUG #10: Implement is_doubtful feature (feature completeness)
+  ☐ BUG #6: Remove route duplication
+
+MEDIUM PRIORITY (Should fix):
+  ☐ BUG #7: Implement TryoutSessionFactory
+  ☐ BUG #8: Implement TryoutSessionSeeder
+  ☐ BUG #9: Implement admin panel methods
+  ☐ Add test coverage (Feature & Unit tests)
+
+LOW PRIORITY (Nice to have):
+  ☐ BUG #14: Relationship naming convention
+  ☐ BUG #13: Potential duplicate session (race condition, unlikely)
+
+
+================================================================================
+7. STRUKTUR DATABASE YANG DIIMPLEMENTASIKAN
+================================================================================
+
+Database Schema:
+
+tryouts (Master Tryout)
+├── id
+├── name
+├── description
+├── is_active
+└── timestamps
+
+tryout_subtests (Sections per Tryout)
+├── id
+├── tryout_id (FK) → tryouts.id
+├── name
+├── duration (minutes)
+├── order
+└── timestamps
+
+tryout_questions (Individual Questions)
+├── id
+├── tryout_subtest_id (FK) → tryout_subtests.id
+├── question_text
+├── question_image
+├── option_a, b, c, d, e
+├── correct_answer (char)
+├── score_weight
+├── discussion (nullable)
+└── timestamps
+
+tryout_sessions (User Exam Session)
+├── id
+├── user_id (FK) → users.id
+├── tryout_id (FK) → tryouts.id
+├── study_program_id
+├── started_at
+├── finished_at (nullable)
+├── total_score (nullable)
+├── score_details (json, nullable)
+└── timestamps
+
+tryout_session_subtests (Progress per Subtest)
+├── id
+├── tryout_session_id (FK) → tryout_sessions.id
+├── tryout_subtest_id (FK) → tryout_subtests.id
+├── started_at
+├── finished_at (nullable)
+└── timestamps
+
+tryout_answers (User Answers)
+├── id
+├── tryout_session_id (FK) → tryout_sessions.id
+├── tryout_question_id (FK) → tryout_questions.id
+├── answer (char, nullable)
+├── is_doubtful (boolean, commented out)
+└── timestamps
+└── UNIQUE(tryout_session_id, tryout_question_id)
+
+
+================================================================================
+8. FILE YANG BERKAITAN DENGAN FITUR TRYOUT
+================================================================================
+
+Struktur Project:
+
+app/
+├── Http/Controllers/TryoutController.php (350 lines, 6 methods)
+├── Models/
+│   ├── Tryout.php (minimal, 1 relationship)
+│   ├── TryoutSubtest.php (2 relationships)
+│   ├── TryoutQuestion.php (3 fields fillable, 2 relationships)
+│   ├── TryoutSession.php (2 relationships, fillable incomplete)
+│   ├── TryoutSessionSubtest.php (1 relationship)
+│   └── TryoutAnswer.php (fillable issues ⚠️)
+│
+database/
+├── migrations/
+│   ├── 2026_03_06_140714_create_tryouts_table.php
+│   ├── 2026_03_07_200331_create_tryout_sessions_table.php
+│   ├── 2026_04_25_140820_create_tryout_subtests_table.php
+│   ├── 2026_04_25_140858_create_tryout_questions_table.php ⚠️ (discussion not in fillable)
+│   ├── 2026_04_25_141025_create_tryout_session_subtests_table.php
+│   └── 2026_04_25_141107_create_tryout_answers_table.php ⚠️ (table name bug)
+│
+├── factories/
+│   └── TryoutSessionFactory.php ❌ (EMPTY)
+│
+├── seeders/
+│   ├── TryoutBatch1Seeder.php ✅ (lengkap, CSV import)
+│   └── TryoutSessionSeeder.php ❌ (EMPTY)
+│
+└── data/
+    └── batch1_*.csv (5 files, untuk import soal)
+
+routes/
+└── web.php (route definition, duplikasi ⚠️)
+
+tests/
+└── (TIDAK ADA test tryout, hanya manual scripts)
+
+resources/
+├── js/
+│   └── Pages/Tryout/ (Inertia components, tidak dijelajahi detail)
+│
+└── views/
+    └── app.blade.php (template utama)
+
+Manual Test Scripts:
+├── test_tryout.php (test seededShuffle)
+├── test_paginator.php (test pagination)
+└── check.php (validation check)
+
+
+================================================================================
+9. CHECKLIST UNTUK DEVELOPER (ACTION ITEMS)
+================================================================================
+
+Untuk menyelesaikan dan menstabilkan fitur tryout:
+
+□ CRITICAL FIXES:
+  □ Fix migration 2026_04_25_141107 line 31: 'table_tryout_answers' → 'tryout_answers'
+  □ Fix TryoutAnswer.php fillable: remove 'id', add 'is_doubtful'
+  □ Fix TryoutQuestion.php fillable: add 'discussion'
+  □ Fix TryoutSessionSubtest.php fillable: remove 'id'
+  □ Add incomplete sessions display to index() method
+  □ Add subtest order validation to showSubtest()
+
+□ FEATURE COMPLETION:
+  □ Uncomment is_doubtful in migration & add to model
+  □ Implement TryoutSessionFactory definition
+  □ Implement TryoutSessionSeeder
+  □ Implement 4 admin CRUD methods in AdminController
+  □ Add auto-submit mechanism dengan job/queue
+  □ Remove duplicate routes dari routes/web.php
+
+□ ROBUSTNESS:
+  □ Add atomic transaction untuk session creation
+  □ Reduce time tolerance dari 10s to 5s (atau 2s)
+  □ Add audit logging untuk admin actions
+  □ Implement resume functionality di frontend
+
+□ TESTING:
+  □ Create Feature test untuk tryout flow
+  □ Create Unit test untuk seededShuffle() determinism
+  □ Create Unit test untuk score calculation
+  □ Create Feature test untuk time validation
+  □ Achieve 80%+ code coverage untuk tryout module
+
+□ DOCUMENTATION:
+  □ Document seededShuffle algorithm & rationale
+  □ Document time validation logic
+  □ Document expected score_details JSON format
+  □ Create API documentation untuk /admin/tryouts endpoints
+
+
+================================================================================
+10. KESIMPULAN
+================================================================================
+
+Status Fitur Tryout: 75% COMPLETE
+
+Hapis telah membuat fondasi yang SOLID dengan:
+✅ Database design yang baik
+✅ Model relationships yang correct
+✅ Controller logic yang comprehensive
+✅ Server-side validation & security checks
+✅ Deterministic question shuffling
+✅ CSV import seeder
+
+Namun masih ada 14 BUG yang perlu diperbaiki sebelum production:
+  - 4 CRITICAL (migration, security, UX)
+  - 4 HIGH (functionality)
+  - 4 MEDIUM (completeness)
+  - 2 LOW (optimization)
+
+Estimated Time to Fix:
+  - Critical: 2-3 jam
+  - High: 3-4 jam
+  - Medium: 4-5 jam
+  - Low: 1-2 jam
+  ─────────────
+  TOTAL: ~10-14 jam development
+
+Setelah fixes, fitur akan siap untuk testing & deployment.
+
+
+================================================================================
+END OF REPORT
+================================================================================
+Tanggal: 16 Mei 2026
+Format: Text (UTF-8)

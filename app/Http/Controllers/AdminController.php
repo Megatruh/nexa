@@ -245,23 +245,57 @@ class AdminController extends Controller
         return back()->with('success', 'Materi belajar berhasil dihapus.');
     }
 
-    public function tryoutsIndex(): Response
+    public function tryoutsIndex(Request $request): Response
     {
-        return Inertia::render('Admin/Tryouts/Index');
+        $search    = $request->get('search');
+        $sort      = in_array($request->get('sort', 'title'), ['title', 'is_active', 'created_at'], true)
+                        ? $request->get('sort', 'title') : 'title';
+        $direction = in_array($request->get('direction', 'asc'), ['asc', 'desc'], true)
+                        ? $request->get('direction', 'asc') : 'asc';
+
+        $tryouts = Tryout::query()
+            ->withCount('subtests')
+            ->when($search, fn ($q, $s) => $q->where('title', 'like', "%{$s}%"))
+            ->orderBy($sort, $direction)
+            ->paginate(12)
+            ->withQueryString();
+
+        return Inertia::render('Admin/Tryouts/Index', [
+            'tryouts' => $tryouts,
+            'filters' => compact('sort', 'direction', 'search'),
+        ]);
     }
 
     public function tryoutsStore(Request $request): RedirectResponse
     {
+        $validated = $request->validate([
+            'title'       => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'is_active'   => ['boolean'],
+        ]);
+
+        Tryout::create($validated);
+
         return back()->with('success', 'Tryout berhasil ditambahkan.');
     }
 
-    public function tryoutsUpdate(Request $request, string $tryout): RedirectResponse
+    public function tryoutsUpdate(Request $request, Tryout $tryout): RedirectResponse
     {
+        $validated = $request->validate([
+            'title'       => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'is_active'   => ['boolean'],
+        ]);
+
+        $tryout->update($validated);
+
         return back()->with('success', 'Tryout berhasil diperbarui.');
     }
 
-    public function tryoutsDestroy(string $tryout): RedirectResponse
+    public function tryoutsDestroy(Tryout $tryout): RedirectResponse
     {
+        $tryout->delete();
+
         return back()->with('success', 'Tryout berhasil dihapus.');
     }
 

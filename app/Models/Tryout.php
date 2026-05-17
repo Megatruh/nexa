@@ -11,9 +11,24 @@ class Tryout extends Model
 
     protected $guarded = ['id'];
 
-    // TAMBAHKAN INI:
+    protected $casts = [
+        'is_active' => 'boolean',
+        'batch'     => 'integer',
+    ];
+
+    /**
+     * Relasi ke daftar subtes
+     */
     public function subtests()
     {
         return $this->hasMany(TryoutSubtest::class);
+    }
+
+    /**
+     * Relasi ke semua sesi pengerjaan
+     */
+    public function sessions()
+    {
+        return $this->hasMany(TryoutSession::class);
     }
 }

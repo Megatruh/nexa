@@ -21,6 +21,7 @@ class TryoutQuestion extends Model
         'option_e',
         'correct_answer',
         'score_weight',
+        'discussion',
     ];
 
     /**

@@ -18,7 +18,9 @@ class SubtestController extends Controller
     public function index(): Response
     {
         // Ambil data subtest beserta jumlah soal dan materinya
-        $subtests = Subtest::withCount(['questions', 'learningMaterials'])->get();
+        $subtests = Subtest::withCount(['questions', 'learningMaterials'])
+                            ->with('learningMaterials')
+                            ->get();
 
         // Kirim data ke file React di resources/js/Pages/Subtests/Index.jsx
         return Inertia::render('Subtests/index', [

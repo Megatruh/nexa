@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect, useCallback, useRef, useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
 import { useTryoutStore } from '@/_store/tryOutStore';
@@ -40,23 +40,32 @@ const ShieldCheckIcon = ({ className }) => (
 
 // ─── OPTION BUTTON — dark theme ───────────────────────────────────────────────
 
-const OptionButton = ({ letter, text, isSelected, onClick }) => {
+const OptionButton = ({ letter, text, isSelected, isSaved, onClick }) => {
     const base = 'w-full flex items-start gap-4 p-4 rounded-xl border text-left transition-all duration-150 group cursor-pointer';
-    const selected = 'border-indigo-400/70 bg-indigo-500/20 shadow-lg shadow-indigo-900/20';
-    const unselected = 'border-white/10 bg-white/5 hover:border-indigo-400/40 hover:bg-white/10';
+    
+    let stateStyles = 'border-white/10 bg-white/5 hover:border-indigo-400/40 hover:bg-white/10'; // unselected
+    let badgeStyles = 'bg-white/10 text-white/60 group-hover:bg-indigo-500/30 group-hover:text-indigo-300';
+
+    if (isSaved) {
+        // Tampilan hijau ketika jawaban sudah disimpan
+        stateStyles = 'border-emerald-400/70 bg-emerald-500/20 shadow-lg shadow-emerald-900/20';
+        badgeStyles = 'bg-emerald-500 text-white';
+    } else if (isSelected) {
+        // Tampilan biru/ungu ketika dipilih tapi belum disimpan
+        stateStyles = 'border-indigo-400/70 bg-indigo-500/20 shadow-lg shadow-indigo-900/20';
+        badgeStyles = 'bg-indigo-500 text-white';
+    }
 
     return (
-        <button type="button" onClick={onClick} className={`${base} ${isSelected ? selected : unselected}`}>
+        <button type="button" onClick={onClick} className={`${base} ${stateStyles}`}>
             <span className={`
                 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
                 transition-colors duration-150
-                ${isSelected
-                    ? 'bg-indigo-500 text-white'
-                    : 'bg-white/10 text-white/60 group-hover:bg-indigo-500/30 group-hover:text-indigo-300'}
+                ${badgeStyles}
             `}>
                 {letter}
             </span>
-            <span className={`pt-1 text-sm leading-relaxed ${isSelected ? 'text-white font-medium' : 'text-white/80'}`}>
+            <span className={`pt-1 text-sm leading-relaxed ${isSelected || isSaved ? 'text-white font-medium' : 'text-white/80'}`}>
                 <Latex>{text || ''}</Latex>
             </span>
         </button>
@@ -148,15 +157,20 @@ export default function Exam({
     allAnswers,
     allDoubtful,
     sisaWaktu,
+    isLastSubtest,
 }) {
     const question = questions?.data?.[0];
+
+    // State lokal untuk opsi yang sedang diklik user tapi belum disimpan
+    const [opsiSementara, setOpsiSementara] = useState(null);
 
     // ─── Zustand store ────────────────────────────────────────────────────────
     const {
         initSesi,
         startTimer,
         stopTimer,
-        simpanJawaban,
+        simpanJawabanServer, // Update state lokal & kirim ke server seketika
+        hapusJawaban,        // Menghapus state lokal & kirim jawaban kosong
         toggleFlag,
         flushPendingSync,
         jawaban,
@@ -180,7 +194,7 @@ export default function Exam({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionSubtest.id]);
 
-    // ─── Init store ───────────────────────────────────────────────────────────
+    // ─── Init store & Timer Reset on Subtest Change ───────────────────────────
     useEffect(() => {
         // Merge allDoubtful ke flagged di store
         const doubtfulSet = new Set(allDoubtful ?? []);
@@ -202,15 +216,27 @@ export default function Exam({
         startTimer();
 
         return () => stopTimer();
+        // Dependency array mengandung subtest.id agar timer mereset secara instan
+        // ketika user pindah ke subtes baru tanpa freeze/nyangkut ke sisa waktu lama.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [subtest.id]);
+
+    // Sinkronkan state opsiSementara saat pindah soal (berdasarkan jawaban dari store/server)
+    useEffect(() => {
+        if (question) {
+            setOpsiSementara(jawaban[question.id] ?? null);
+        }
+    }, [question?.id, jawaban]);
 
     // ─── Sinkron jawaban dari server ke store ─────────────────────────────────
     useEffect(() => {
         if (savedAnswer?.answer && question?.id) {
             const jawabanLokal = useTryoutStore.getState().jawaban[question.id];
             if (!jawabanLokal) {
-                simpanJawaban(question.id, savedAnswer.answer);
+                // Saat render awal, kita simpan secara lokal agar tidak nge-trigger sync axios
+                useTryoutStore.setState(state => ({
+                    jawaban: { ...state.jawaban, [question.id]: savedAnswer.answer }
+                }));
             }
         }
     }, [savedAnswer, question?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -227,10 +253,22 @@ export default function Exam({
         );
     };
 
-    // ─── Simpan jawaban ───────────────────────────────────────────────────────
-    const handleAnswer = (choice) => {
+    // ─── Memilih opsi tanpa langsung menyimpan ke server ───────────────────────
+    const handleSelectOption = (choice) => {
+        setOpsiSementara(choice);
+    };
+
+    // ─── Aksi: Simpan Jawaban ──────────────────────────────────────────────────
+    const handleSaveOption = async () => {
+        if (!question || !opsiSementara) return;
+        await simpanJawabanServer(question.id, opsiSementara);
+    };
+
+    // ─── Aksi: Batalkan Jawaban ────────────────────────────────────────────────
+    const handleClearOption = async () => {
         if (!question) return;
-        simpanJawaban(question.id, choice);
+        setOpsiSementara(null);
+        await hapusJawaban(question.id);
     };
 
     // ─── Selesaikan subtes (dengan validasi ragu-ragu) ────────────────────────
@@ -262,7 +300,9 @@ export default function Exam({
             }
 
             const confirmed = window.confirm(
-                'Yakin ingin mengakhiri subtes ini? Soal yang belum dijawab tidak akan dinilai.'
+                isLastSubtest
+                ? 'Ini adalah subtes terakhir. Yakin ingin MENGAKHIRI SELURUH TRYOUT? Soal yang belum dijawab tidak akan dinilai.'
+                : 'Yakin ingin mengakhiri subtes ini? Soal yang belum dijawab tidak akan dinilai.'
             );
             if (!confirmed) return;
         }
@@ -276,16 +316,31 @@ export default function Exam({
             console.error('[Exam] flushPendingSync error:', err);
         }
 
-        router.post(
-            route('tryout.subtest.finish', { session_subtest_id: sessionSubtest.id }),
-            {},
-            {
-                onError: () => {
-                    isFinishing.current = false;
-                    alert('Terjadi kesalahan. Silakan coba lagi.');
-                },
-            }
-        );
+        // Jika ini adalah subtes paling akhir dari rangkaian tryout, eksekusi submitExam langsung
+        if (isLastSubtest && !isAuto) {
+            router.post(
+                route('tryout.exam.submit', { session_id: session.id }),
+                {},
+                {
+                    onError: () => {
+                        isFinishing.current = false;
+                        alert('Terjadi kesalahan saat submit tryout. Silakan coba lagi.');
+                    },
+                }
+            );
+        } else {
+            // Lanjut ke subtes selanjutnya
+            router.post(
+                route('tryout.subtest.finish', { session_subtest_id: sessionSubtest.id }),
+                {},
+                {
+                    onError: () => {
+                        isFinishing.current = false;
+                        alert('Terjadi kesalahan. Silakan coba lagi.');
+                    },
+                }
+            );
+        }
     };
 
     // ─── Guard ────────────────────────────────────────────────────────────────
@@ -381,22 +436,6 @@ export default function Exam({
                                         dari <span className="font-semibold text-white/80">{questions.total}</span> soal
                                     </span>
                                 </div>
-
-                                {/* Tombol ragu-ragu */}
-                                <button
-                                    type="button"
-                                    onClick={() => toggleFlag(question.id)}
-                                    className={`
-                                        flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold
-                                        border transition-colors duration-150
-                                        ${isFlagged
-                                            ? 'bg-amber-400/20 border-amber-400/50 text-amber-300'
-                                            : 'bg-white/5 border-white/10 text-white/50 hover:bg-amber-400/10 hover:border-amber-400/30 hover:text-amber-300'}
-                                    `}
-                                >
-                                    <FlagIcon filled={isFlagged} className="w-3.5 h-3.5" />
-                                    {isFlagged ? 'Ragu-ragu' : 'Tandai Ragu'}
-                                </button>
                             </div>
 
                             {/* Gambar soal (opsional) */}
@@ -420,19 +459,25 @@ export default function Exam({
 
                             {/* Pilihan jawaban */}
                             <div className="px-6 pb-6 space-y-3">
-                                {opsiList.map((letter) => (
-                                    <OptionButton
-                                        key={letter}
-                                        letter={letter.toUpperCase()}
-                                        text={question[`option_${letter}`]}
-                                        isSelected={jawabanSoalIni === letter.toUpperCase()}
-                                        onClick={() => handleAnswer(letter.toUpperCase())}
-                                    />
-                                ))}
+                                {opsiList.map((letter) => {
+                                    const ltr = letter.toUpperCase();
+                                    return (
+                                        <OptionButton
+                                            key={letter}
+                                            letter={ltr}
+                                            text={question[`option_${letter}`]}
+                                            isSelected={opsiSementara === ltr && jawabanSoalIni !== ltr}
+                                            isSaved={jawabanSoalIni === ltr}
+                                            onClick={() => handleSelectOption(ltr)}
+                                        />
+                                    )
+                                })}
                             </div>
 
-                            {/* Navigasi prev / next */}
-                            <div className="flex items-center justify-between px-6 py-4 border-t border-white/10 bg-white/5">
+                            {/* Navigasi prev / next dan aksi jawaban */}
+                            <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-white/10 bg-white/5 gap-4">
+                                
+                                {/* 1. Tombol Sebelumnya */}
                                 <button
                                     type="button"
                                     onClick={() => questions.prev_page_url && goToPage(questions.current_page - 1)}
@@ -440,26 +485,71 @@ export default function Exam({
                                     className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold
                                         bg-white/5 border border-white/10 text-white/70
                                         hover:bg-white/10 hover:border-white/20 transition-colors
-                                        disabled:opacity-30 disabled:cursor-not-allowed"
+                                        disabled:opacity-30 disabled:cursor-not-allowed w-full sm:w-auto justify-center flex-shrink-0"
                                 >
                                     <ChevronLeft /> Sebelumnya
                                 </button>
 
-                                <span className="text-xs text-white/30 hidden sm:block">
-                                    {questions.current_page} / {questions.last_page}
-                                </span>
+                                {/* 2. Barisan Tombol Aksi (Simpan, Ragu, Batal) */}
+                                <div className="flex flex-wrap items-center justify-center gap-2 w-full sm:flex-1">
+                                    <button
+                                        type="button"
+                                        onClick={handleSaveOption}
+                                        disabled={!opsiSementara || jawabanSoalIni === opsiSementara}
+                                        className="px-4 py-2 rounded-lg text-sm font-semibold bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                    >
+                                        Simpan
+                                    </button>
 
-                                <button
-                                    type="button"
-                                    onClick={() => questions.next_page_url && goToPage(questions.current_page + 1)}
-                                    disabled={!questions.next_page_url}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold
-                                        bg-indigo-500/80 border border-indigo-400/40 text-white
-                                        hover:bg-indigo-500 transition-colors
-                                        disabled:opacity-30 disabled:cursor-not-allowed"
-                                >
-                                    Selanjutnya <ChevronRight />
-                                </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleFlag(question.id)}
+                                        className={`
+                                            flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-semibold border transition-colors
+                                            ${isFlagged
+                                                ? 'bg-amber-400/20 border-amber-400/50 text-amber-300'
+                                                : 'bg-white/5 border-white/10 text-white/70 hover:bg-amber-400/10 hover:border-amber-400/30 hover:text-amber-300'}
+                                        `}
+                                    >
+                                        <FlagIcon filled={isFlagged} className="w-3.5 h-3.5" />
+                                        {isFlagged ? 'Ragu-ragu' : 'Tandai Ragu'}
+                                    </button>
+
+                                    <button
+                                        type="button"
+                                        onClick={handleClearOption}
+                                        disabled={!opsiSementara && !jawabanSoalIni}
+                                        className="px-4 py-2 rounded-lg text-sm font-semibold bg-rose-500/20 border border-rose-500/50 text-rose-300 hover:bg-rose-500/30 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                                    >
+                                        Batalkan Pilihan
+                                    </button>
+                                </div>
+
+                                {/* 3. Tombol Selanjutnya / Selesai */}
+                                {questions.current_page === questions.total ? (
+                                    <button
+                                        type="button"
+                                        onClick={() => handleFinishSubtest(false)}
+                                        disabled={isFinishing.current}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold
+                                            bg-indigo-500/80 border border-indigo-400/40 text-white
+                                            hover:bg-indigo-500 transition-colors w-full sm:w-auto justify-center flex-shrink-0"
+                                    >
+                                        Selesai Subtes <ChevronRight />
+                                    </button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={() => questions.next_page_url && goToPage(questions.current_page + 1)}
+                                        disabled={!questions.next_page_url}
+                                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold
+                                            bg-indigo-500/80 border border-indigo-400/40 text-white
+                                            hover:bg-indigo-500 transition-colors
+                                            disabled:opacity-30 disabled:cursor-not-allowed w-full sm:w-auto justify-center flex-shrink-0"
+                                    >
+                                        Selanjutnya <ChevronRight />
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

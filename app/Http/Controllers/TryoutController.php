@@ -208,6 +208,10 @@ class TryoutController extends Controller
             ->values()
             ->toArray();
 
+        $isLastSubtest = !TryoutSubtest::where('tryout_id', $tryout_id)
+            ->where('order', '>', $subtest->order)
+            ->exists();
+
         return Inertia::render('Tryout/Exam', [
             'session'        => $session,
             'subtest'        => $subtest,
@@ -218,6 +222,7 @@ class TryoutController extends Controller
             'allAnswers'     => $allAnswers,
             'allDoubtful'    => $allDoubtful,
             'sisaWaktu'      => $sisaWaktu,
+            'isLastSubtest'  => $isLastSubtest,
         ]);
     }
 

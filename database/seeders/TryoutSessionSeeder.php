@@ -14,29 +14,21 @@ class TryoutSessionSeeder extends Seeder
     /**
      * Seed sesi tryout untuk pengujian.
      *
-     * Membuat 3 sesi aktif (belum selesai) dan 5 sesi yang sudah
-     * selesai menggunakan factory yang sudah didefinisikan.
+     * ⚠️  DINONAKTIFKAN — Seeder ini sebelumnya menjadi sumber bug "Ghost Session":
+     *     Saat `migrate:fresh --seed` dijalankan, seeder ini membuat data sesi
+     *     dummy (status "Belum Selesai") untuk seluruh user yang ada, termasuk
+     *     User1. Akibatnya, saat user login pertama kali, riwayat "Belum Selesai"
+     *     sudah muncul padahal user belum pernah memulai ujian sama sekali.
+     *
+     *     Untuk menghindari hal ini, JANGAN panggil seeder ini di DatabaseSeeder.
+     *     Sesi tryout hanya boleh dibuat oleh TryoutController saat user benar-
+     *     benar mengklik tombol "Mulai Ujian" di frontend.
      */
     public function run(): void
     {
-        // Gunakan user yang sudah ada, atau buat jika belum ada
-        $users = User::where('role', 'user')->limit(5)->get();
-
-        if ($users->isEmpty()) {
-            $users = User::factory(3)->create(['role' => 'user']);
-        }
-
-        foreach ($users as $user) {
-            // Sesi aktif — belum selesai (bisa dilanjutkan)
-            TryoutSession::factory()
-                ->count(1)
-                ->create(['user_id' => $user->id]);
-
-            // Sesi selesai — untuk riwayat
-            TryoutSession::factory()
-                ->finished()
-                ->count(2)
-                ->create(['user_id' => $user->id]);
-        }
+        // Tidak ada data dummy yang dibuat.
+        // Sesi tryout dibuat secara organik melalui TryoutController::showSubtest()
+        // saat user pertama kali mengakses halaman ujian.
+        $this->command->warn('TryoutSessionSeeder: DILEWATI — tidak ada dummy session yang dibuat (mencegah Ghost Session Bug).');
     }
 }

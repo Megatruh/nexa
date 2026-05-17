@@ -54,49 +54,64 @@ class TryoutBatch1Seeder extends Seeder
      * Daftar subtes: [ Nama Subtes => file CSV ]
      * Sesuaikan nama file dengan yang ada di database/data/
      */
+    /**
+     * Daftar konfigurasi subtes SNBT Resmi.
+     *
+     * Durasi (menit) mengikuti aturan resmi SNBT:
+     *  - Penalaran Umum               : 30 menit
+     *  - Pengetahuan & Pemahaman Umum : 15 menit
+     *  - Pemahaman Bacaan dan Menulis  : 25 menit
+     *  - Pengetahuan Kuantitatif       : 20 menit
+     *  - Literasi Bahasa Indonesia     : 42.5 menit (42 menit 30 detik)
+     *  - Literasi Bahasa Inggris       : 20 menit
+     *  - Penalaran Matematika          : 42.5 menit (42 menit 30 detik)
+     *
+     * Nilai desimal (42.5) diizinkan karena controller menggunakan `$subtest->duration * 60`
+     * untuk mengkonversi ke detik → 42.5 * 60 = 2550 detik.
+     */
     private array $subtestConfig = [
         [
             'name'     => 'Penalaran Umum',
             'file'     => 'batch1_pu.csv',
-            'duration' => 30,  // menit
+            'duration' => 30,    // 30 menit (SNBT resmi)
             'order'    => 1,
         ],
         [
             'name'     => 'Pengetahuan & Pemahaman Umum',
             'file'     => 'batch1_ppu.csv',
-            'duration' => 30,
+            'duration' => 15,    // 15 menit (SNBT resmi) — sebelumnya salah: 30
             'order'    => 2,
         ],
         [
             'name'     => 'Pengetahuan Kuantitatif',
             'file'     => 'batch1_pku.csv',
-            'duration' => 25,
+            'duration' => 20,    // 20 menit (SNBT resmi) — sebelumnya salah: 25
             'order'    => 3,
         ],
         [
             'name'     => 'Literasi Bahasa Indonesia',
             'file'     => 'batch1_literasi_indo.csv',
-            'duration' => 30,
+            'duration' => 42.5,  // 42 menit 30 detik (SNBT resmi) — sebelumnya salah: 30
             'order'    => 4,
         ],
         [
             'name'     => 'Literasi Bahasa Inggris',
             'file'     => 'batch1_literasi_ing.csv',
-            'duration' => 25,
+            'duration' => 20,    // 20 menit (SNBT resmi) — sebelumnya salah: 25
             'order'    => 5,
         ],
         [
             'name'     => 'Pemahaman Bacaan dan Menulis',
             'file'     => 'batch1_pbm.csv',
-            'duration' => 20,
+            'duration' => 25,    // 25 menit (SNBT resmi) — sebelumnya salah: 20
             'order'    => 6,
         ],
         [
             'name'     => 'Penalaran Matematika',
             'file'     => 'batch1_pm.csv',
-            'duration' => 30,
+            'duration' => 42.5,  // 42 menit 30 detik (SNBT resmi) — sebelumnya salah: 30
             'order'    => 7,
-        ]
+        ],
     ];
 
     public function run(): void
@@ -247,11 +262,16 @@ class TryoutBatch1Seeder extends Seeder
 
     /**
      * Bersihkan teks: trim whitespace dan newline yang tidak perlu.
-     * Pertahankan HTML tag untuk soal yang menggunakan rich text.
+     * Mengganti "US$" menjadi "USD " agar tidak dibaca sebagai
+     * pembuka blok matematika (LaTeX) oleh frontend.
      */
     private function cleanText(string $text): string
     {
-        return trim($text);
+        $text = trim($text);
+        // Mencegah format rusak akibat $ pada mata uang
+        $text = str_replace('US$', 'USD ', $text);
+        $text = str_replace('Rp.', 'Rp', $text);
+        return $text;
     }
 
     /**

@@ -48,6 +48,20 @@ class StudyProgramDescriptionSeeder extends Seeder
             }
             $firstline = false;
         }
+        //tambahkan jurusan dummy dengan passing grade 0
+        StudyProgramDescription::create([
+            'name'              => 'Dummy',
+            'passing_grade_min' => 0,
+            'passing_grade_max' => 100,
+            'career_prospects'  => 'Dummy',
+            'description'       => 'Dummy',
+            'rating'            => 5,
+            'accreditation'     => 'A',
+            'ukt_range'         => '0',
+            'enthusiasts'       => 100,
+            'related_subjects'  => 'Dummy',
+            'capacity'          => 100,
+        ]);
 
         fclose($file);
         $this->command->info("Boom! Data Ulasan Prodi berhasil diimpor!");

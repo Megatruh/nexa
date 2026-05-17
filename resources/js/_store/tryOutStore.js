@@ -179,6 +179,92 @@ export const useTryoutStore = create((set, get) => ({
     },
 
     /**
+     * Simpan jawaban langsung ke server TANPA debounce (dipanggil tombol "Simpan").
+     * Cocok untuk aksi eksplisit user — tidak perlu menunggu debounce.
+     *
+     * @param {number} questionId
+     * @param {string} opsi - 'A' | 'B' | 'C' | 'D' | 'E'
+     * @returns {Promise<boolean>} - true jika berhasil
+     */
+    simpanJawabanServer: async (questionId, opsi) => {
+        const { _sessionId, flagged } = get();
+        if (!_sessionId) return false;
+
+        // Batalkan debounce yang masih berjalan untuk soal ini
+        if (_debounceTimers[questionId]) {
+            clearTimeout(_debounceTimers[questionId]);
+            delete _debounceTimers[questionId];
+        }
+
+        // Update state lokal lebih dulu agar UI langsung responsif
+        set((state) => ({
+            jawaban: { ...state.jawaban, [questionId]: opsi },
+        }));
+
+        try {
+            await axios.post(route('tryout.answer.store'), {
+                tryout_session_id: _sessionId,
+                tryout_question_id: questionId,
+                answer: opsi,
+                is_doubtful: flagged.has(questionId),
+            });
+
+            // Hapus dari pending jika ada
+            set((state) => {
+                const newPending = { ...state._pendingSync };
+                delete newPending[questionId];
+                return { _pendingSync: newPending };
+            });
+
+            return true;
+        } catch (err) {
+            console.error('[tryOutStore] simpanJawabanServer error:', questionId, err);
+            return false;
+        }
+    },
+
+    /**
+     * Hapus (batalkan) jawaban dari state lokal dan kirim null ke server.
+     * Dipanggil saat user klik tombol "Batalkan Pilihan".
+     *
+     * @param {number} questionId
+     * @returns {Promise<boolean>} - true jika berhasil
+     */
+    hapusJawaban: async (questionId) => {
+        const { _sessionId } = get();
+        if (!_sessionId) return false;
+
+        // Batalkan debounce yang masih berjalan
+        if (_debounceTimers[questionId]) {
+            clearTimeout(_debounceTimers[questionId]);
+            delete _debounceTimers[questionId];
+        }
+
+        // Hapus dari state lokal secara INSTAN
+        set((state) => {
+            const newJawaban = { ...state.jawaban };
+            delete newJawaban[questionId]; // Soal jadi berstatus "belum"
+            const newPending = { ...state._pendingSync };
+            delete newPending[questionId];
+            return { jawaban: newJawaban, _pendingSync: newPending };
+        });
+
+        try {
+            // Kirim answer: null ke server — storeAnswer sudah mendukung nullable
+            await axios.post(route('tryout.answer.store'), {
+                tryout_session_id: _sessionId,
+                tryout_question_id: questionId,
+                answer: null,
+                is_doubtful: false,
+            });
+            return true;
+        } catch (err) {
+            console.error('[tryOutStore] hapusJawaban error:', questionId, err);
+            return false;
+        }
+    },
+
+    /**
      * Toggle flag ragu-ragu. Juga sync ke server jika sudah ada jawaban.
      *
      * @param {number} questionId

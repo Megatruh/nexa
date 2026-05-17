@@ -49,6 +49,8 @@ export default function MajorsIndex() {
         setPassingGradeDisplay('');
         setPassingGradeError('');
         setIsModalOpen(true);
+        // ── Body Scroll Lock: Kunci scroll background saat modal terbuka ──
+        document.body.classList.add('overflow-hidden');
     };
 
     const openEditModal = (major) => {
@@ -73,6 +75,8 @@ export default function MajorsIndex() {
             description: major.description ?? '',
         });
         setIsModalOpen(true);
+        // ── Body Scroll Lock: Kunci scroll background saat modal terbuka ──
+        document.body.classList.add('overflow-hidden');
     };
 
     const closeModal = () => {
@@ -81,6 +85,8 @@ export default function MajorsIndex() {
         reset();
         setPassingGradeDisplay('');
         setPassingGradeError('');
+        // ── Body Scroll Lock: Kembalikan scroll body saat modal ditutup ──
+        document.body.classList.remove('overflow-hidden');
     };
 
     const handlePassingGradeChange = (value) => {
@@ -429,8 +435,13 @@ export default function MajorsIndex() {
             </div>
 
             {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-space-dark/80 px-4 py-10">
-                    <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-space-mid/70 p-6 text-white shadow-2xl backdrop-blur-md">
+                <div className="fixed inset-0 z-50 flex items-start justify-center bg-space-dark/80 px-4 py-10 overflow-y-auto">
+                    {/*
+                     * max-h-[90vh] overflow-y-auto — agar isi modal yang panjang
+                     * bisa di-scroll secara mandiri, bukan scroll background halaman.
+                     * my-auto untuk menjaga modal tetap terpusat secara vertikal.
+                     */}
+                    <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-space-mid/70 p-6 text-white shadow-2xl backdrop-blur-md max-h-[90vh] overflow-y-auto my-auto">
                         <div className="mb-6 flex items-start justify-between">
                             <div>
                                 <h2 className="text-xl font-semibold">

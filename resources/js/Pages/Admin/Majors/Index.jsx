@@ -12,12 +12,15 @@ export default function MajorsIndex() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingMajor, setEditingMajor] = useState(null);
     const [search, setSearch] = useState(filters?.search ?? '');
+    const [passingGradeDisplay, setPassingGradeDisplay] = useState('');
+    const [passingGradeError, setPassingGradeError] = useState('');
 
     const { data, setData, post, put, processing, reset } = useForm({
         name: '',
         accreditation: '',
         rating: '',
-        passing_grade: '',
+        passing_grade_min: '',
+        passing_grade_max: '',
         capacity: '',
         enthusiasts: '',
         ukt_range: '',
@@ -43,16 +46,25 @@ export default function MajorsIndex() {
     const openCreateModal = () => {
         setEditingMajor(null);
         reset();
+        setPassingGradeDisplay('');
+        setPassingGradeError('');
         setIsModalOpen(true);
     };
 
     const openEditModal = (major) => {
         setEditingMajor(major);
+        const min = major.passing_grade_min ?? '';
+        const max = major.passing_grade_max ?? '';
+        setPassingGradeDisplay(
+            min || max ? `${min}-${max}` : ''
+        );
+        setPassingGradeError('');
         setData({
             name: major.name ?? '',
             accreditation: major.accreditation ?? '',
             rating: major.rating ?? '',
-            passing_grade: major.passing_grade ?? '',
+            passing_grade_min: min,
+            passing_grade_max: max,
             capacity: major.capacity ?? '',
             enthusiasts: major.enthusiasts ?? '',
             ukt_range: major.ukt_range ?? '',
@@ -67,10 +79,94 @@ export default function MajorsIndex() {
         setIsModalOpen(false);
         setEditingMajor(null);
         reset();
+        setPassingGradeDisplay('');
+        setPassingGradeError('');
+    };
+
+    const handlePassingGradeChange = (value) => {
+        setPassingGradeDisplay(value);
+
+        // Allow empty value (clear both fields)
+        if (value.trim() === '') {
+            setData((prev) => ({
+                ...prev,
+                passing_grade_min: '',
+                passing_grade_max: '',
+            }));
+            setPassingGradeError('');
+            return;
+        }
+
+        // Check if value contains a dash separator
+        if (!value.includes('-')) {
+            setPassingGradeError('Gunakan format: min-max (contoh: 590-680)');
+            setData((prev) => ({
+                ...prev,
+                passing_grade_min: '',
+                passing_grade_max: '',
+            }));
+            return;
+        }
+
+        const parts = value.split('-').map((p) => p.trim());
+        if (parts.length !== 2 || parts[0] === '' || parts[1] === '') {
+            setPassingGradeError('Gunakan format: min-max (contoh: 590-680)');
+            setData((prev) => ({
+                ...prev,
+                passing_grade_min: '',
+                passing_grade_max: '',
+            }));
+            return;
+        }
+
+        const min = Number(parts[0]);
+        const max = Number(parts[1]);
+
+        if (isNaN(min) || isNaN(max)) {
+            setPassingGradeError('Nilai harus berupa angka');
+            setData((prev) => ({
+                ...prev,
+                passing_grade_min: '',
+                passing_grade_max: '',
+            }));
+            return;
+        }
+
+        if (min < 0 || max < 0) {
+            setPassingGradeError('Nilai harus positif (tidak boleh negatif)');
+            setData((prev) => ({
+                ...prev,
+                passing_grade_min: '',
+                passing_grade_max: '',
+            }));
+            return;
+        }
+
+        if (min >= max) {
+            setPassingGradeError('Nilai minimum harus lebih kecil dari nilai maksimum');
+            setData((prev) => ({
+                ...prev,
+                passing_grade_min: '',
+                passing_grade_max: '',
+            }));
+            return;
+        }
+
+        // Valid input
+        setPassingGradeError('');
+        setData((prev) => ({
+            ...prev,
+            passing_grade_min: String(min),
+            passing_grade_max: String(max),
+        }));
     };
 
     const handleSubmit = (event) => {
         event.preventDefault();
+
+        if (passingGradeError) {
+            return;
+        }
 
         if (editingMajor?.id) {
             put(route('admin.majors.update', editingMajor.id), {
@@ -200,13 +296,13 @@ export default function MajorsIndex() {
                                         <button
                                             type="button"
                                             onClick={() =>
-                                                handleSort('passing_grade')
+                                                handleSort('passing_grade_max')
                                             }
                                             className="inline-flex items-center gap-2 text-left"
                                         >
                                             Passing Grade
                                             <span className="text-indigo-200/70">
-                                                {sortIndicator('passing_grade')}
+                                                {sortIndicator('passing_grade_max')}
                                             </span>
                                         </button>
                                     </th>
@@ -269,7 +365,7 @@ export default function MajorsIndex() {
                                             {major.rating ?? '-'}
                                         </td>
                                         <td className="px-6 py-4 text-white/70">
-                                            {major.passing_grade || '-'}
+                                            {major.passing_grade_max || '-'}
                                         </td>
                                         <td className="px-6 py-4 text-white/70">
                                             {major.capacity ?? '-'}
@@ -413,17 +509,25 @@ export default function MajorsIndex() {
                                         Range Passing Grade
                                     </label>
                                     <input
-                                        value={data.passing_grade}
+                                        value={passingGradeDisplay}
                                         onChange={(event) =>
-                                            setData(
-                                                'passing_grade',
+                                            handlePassingGradeChange(
                                                 event.target.value
                                             )
                                         }
                                         type="text"
-                                        className="mt-2 w-full rounded-xl border border-white/10 bg-space-dark/60 p-3 text-sm text-white placeholder:text-white/40 focus:border-indigo-400 focus:ring-0"
+                                        className={`mt-2 w-full rounded-xl border bg-space-dark/60 p-3 text-sm text-white placeholder:text-white/40 focus:ring-0 ${
+                                            passingGradeError
+                                                ? 'border-rose-400/60 focus:border-rose-400'
+                                                : 'border-white/10 focus:border-indigo-400'
+                                        }`}
                                         placeholder="Contoh: 590-680"
                                     />
+                                    {passingGradeError && (
+                                        <p className="mt-1.5 text-xs text-rose-400">
+                                            {passingGradeError}
+                                        </p>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="text-xs uppercase tracking-widest text-white/70">

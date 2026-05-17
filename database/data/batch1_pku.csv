@@ -1,8 +1,21 @@
 question_text,question_image,option_a,option_b,option_c,option_d,option_e,correct_answer,score_weight
-"Diketahui x
-
-2 + 6 (3x + 3)(px – 2) memiliki nilai yang sama dengan qx2
-
-. Nilai q yang sesuai
-
-adalah...",,5,6,7,8,9,c ,10
+"Jika $2x + 3y = 12$ dan $x - y = 1$, maka nilai $x + y$ adalah...",,$3$,$4$,$5$,$6$,$7$,C,1
+Sebuah barisan aritmetika memiliki suku pertama $a = 5$ dan beda $d = 3$. Suku ke-$10$ dari barisan tersebut adalah...,,$30$,$31$,$32$,$33$,$34$,C,1
+Nilai dari $\log_2 64 + \log_3 27$ adalah...,,$8$,$9$,$10$,$11$,$12$,B,1
+"Jika $f(x) = x^2 - 4x + 3$, maka nilai minimum fungsi tersebut adalah...",,$-2$,$-1$,$0$,$1$,$2$,B,1
+Sebuah segitiga siku-siku memiliki dua sisi siku-siku sepanjang $6$ cm dan $8$ cm. Panjang hipotenusanya adalah...,,$9$ cm,$10$ cm,$11$ cm,$12$ cm,$14$ cm,B,1
+Diketahui matriks $A = \begin{bmatrix} 2 & 1 \\ 3 & 4 \end{bmatrix}$. Nilai determinan matriks $A$ adalah...,,$3$,$4$,$5$,$6$,$7$,C,1
+"Hasil dari $\int_0^2 (3x^2 + 2x)\, dx$ adalah...",,$10$,$12$,$14$,$16$,$18$,B,1
+"Jika $\sin\theta = \frac{3}{5}$ dan $\theta$ berada di kuadran I, maka nilai $\cos\theta$ adalah...",,$\frac{1}{5}$,$\frac{2}{5}$,$\frac{3}{5}$,$\frac{4}{5}$,$\frac{5}{4}$,D,1
+Sebuah tabung memiliki jari-jari $r = 7$ cm dan tinggi $h = 10$ cm. Volume tabung tersebut (dengan $\pi = \frac{22}{7}$) adalah...,,$1.400$ cm$^3$,$1.450$ cm$^3$,$1.540$ cm$^3$,$1.600$ cm$^3$,$1.650$ cm$^3$,C,1
+"Jika $3^{x+1} = 81$, maka nilai $x$ adalah...",,$2$,$3$,$4$,$5$,$6$,B,1
+Deret geometri dengan suku pertama $a = 2$ dan rasio $r = 3$ memiliki jumlah 5 suku pertama sebesar...,,$240$,$242$,$244$,$246$,$248$,B,1
+"Persamaan lingkaran dengan pusat $(3, -2)$ dan jari-jari $5$ adalah...",,$(x-3)^2 + (y+2)^2 = 5$,$(x+3)^2 + (y-2)^2 = 25$,$(x-3)^2 + (y+2)^2 = 25$,$(x+3)^2 + (y+2)^2 = 25$,$(x-3)^2 + (y-2)^2 = 25$,C,1
+Nilai dari $\lim_{x \to 2} \frac{x^2 - 4}{x - 2}$ adalah...,,$0$,$2$,$4$,$6$,$8$,C,1
+"Jika vektor $\vec{a} = (3, 4)$, maka panjang (modulus) vektor $\vec{a}$ adalah...",,$3$,$4$,$5$,$6$,$7$,C,1
+"Dalam sebuah kelas terdapat $30$ siswa. Jika peluang seorang siswa lulus ujian adalah $0{,}8$, maka ekspektasi jumlah siswa yang lulus adalah...",,$20$,$22$,$24$,$26$,$28$,C,1
+Nilai dari $\frac{d}{dx}(x^3 - 5x^2 + 6x - 2)$ saat $x = 2$ adalah...,,$-2$,$-1$,$0$,$1$,$2$,C,1
+"Jika $A$ dan $B$ adalah dua kejadian dengan $P(A) = 0{,}4$ $P(B) = 0{,}5$ dan $P(A \cap B) = 0{,}2$, maka $P(A \cup B)$ adalah...",,"$0{,}5$","$0{,}6$","$0{,}7$","$0{,}8$","$0{,}9$",C,1
+Jumlah semua bilangan bulat dari $1$ sampai $100$ adalah...,,$4.500$,$4.950$,$5.000$,$5.050$,$5.500$,D,1
+Diketahui $\cos 60^\circ = \frac{1}{2}$ dan $\sin 60^\circ = \frac{1}{2}\sqrt{3}$. Nilai dari $\tan 60^\circ$ adalah...,,$\frac{1}{2}$,$1$,$\sqrt{2}$,$\sqrt{3}$,$2$,D,1
+Himpunan penyelesaian dari pertidaksamaan $2x - 5 > 3$ adalah...,,$x < 4$,$x > 3$,$x > 4$,$x < 3$,$x \geq 4$,C,1

@@ -2,6 +2,8 @@ import React, { useEffect, useCallback, useRef } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
 import { useTryoutStore } from '@/_store/tryOutStore';
+import Latex from 'react-latex-next';
+import 'katex/dist/katex.min.css';
 
 // ─── ICON HELPERS ─────────────────────────────────────────────────────────────
 
@@ -56,8 +58,9 @@ const OptionButton = ({ letter, text, isSelected, onClick }) => {
             </span>
             <span
                 className={`pt-1 text-sm leading-relaxed ${isSelected ? 'text-blue-900 font-medium' : 'text-gray-700'}`}
-                dangerouslySetInnerHTML={{ __html: text }}
-            />
+            >
+                <Latex>{text || ''}</Latex>
+            </span>
         </button>
     );
 };
@@ -385,12 +388,11 @@ export default function Exam({
                                 </div>
                             )}
 
-                            {/* Teks soal — mendukung HTML (LaTeX / format rich text) */}
+                            {/* Teks soal — dengan dukungan LaTeX */}
                             <div className="px-6 pt-5 pb-4">
-                                <div
-                                    className="text-gray-800 leading-relaxed text-[15px] prose prose-sm max-w-none"
-                                    dangerouslySetInnerHTML={{ __html: question.question_text }}
-                                />
+                                <div className="text-gray-800 leading-relaxed text-[15px] prose prose-sm max-w-none">
+                                    <Latex>{question.question_text || ''}</Latex>
+                                </div>
                             </div>
 
                             {/* Pilihan jawaban */}

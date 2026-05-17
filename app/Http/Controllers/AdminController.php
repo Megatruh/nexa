@@ -131,7 +131,8 @@ class AdminController extends Controller
             'name',
             'accreditation',
             'rating',
-            'passing_grade',
+            'passing_grade_min',
+            'passing_grade_max',
             'capacity',
             'enthusiasts',
         ];
@@ -155,7 +156,8 @@ class AdminController extends Controller
                 'rating',
                 'capacity',
                 'enthusiasts',
-                'passing_grade',
+                'passing_grade_min',
+                'passing_grade_max',
                 'description',
             ])
             ->when($search, function ($query, $search) {

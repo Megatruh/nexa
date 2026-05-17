@@ -17,7 +17,8 @@ export default function MajorsIndex() {
         name: '',
         accreditation: '',
         rating: '',
-        passing_grade: '',
+        passing_grade_min: '',
+        passing_grade_max: '',
         capacity: '',
         enthusiasts: '',
         ukt_range: '',
@@ -52,7 +53,8 @@ export default function MajorsIndex() {
             name: major.name ?? '',
             accreditation: major.accreditation ?? '',
             rating: major.rating ?? '',
-            passing_grade: major.passing_grade ?? '',
+            passing_grade_min: major.passing_grade_min ?? '',
+            passing_grade_max: major.passing_grade_max ?? '',
             capacity: major.capacity ?? '',
             enthusiasts: major.enthusiasts ?? '',
             ukt_range: major.ukt_range ?? '',
@@ -198,13 +200,13 @@ export default function MajorsIndex() {
                                         <button
                                             type="button"
                                             onClick={() =>
-                                                handleSort('passing_grade')
+                                                handleSort('passing_grade_max')
                                             }
                                             className="inline-flex items-center gap-2 text-left"
                                         >
                                             Passing Grade
                                             <span className="text-indigo-200/70">
-                                                {sortIndicator('passing_grade')}
+                                                {sortIndicator('passing_grade_max')}
                                             </span>
                                         </button>
                                     </th>
@@ -267,7 +269,7 @@ export default function MajorsIndex() {
                                             {major.rating ?? '-'}
                                         </td>
                                         <td className="px-6 py-4 text-white/70">
-                                            {major.passing_grade || '-'}
+                                            {major.passing_grade_max || '-'}
                                         </td>
                                         <td className="px-6 py-4 text-white/70">
                                             {major.capacity ?? '-'}

@@ -30,8 +30,13 @@ function useCountUp(target, duration = 1200) {
                         const elapsed = now - start;
                         const progress = Math.min(elapsed / duration, 1);
                         const ease = 1 - Math.pow(2, -10 * progress);
-                        setCount(Math.floor(ease * target));
-                        if (progress < 1) requestAnimationFrame(step);
+                        
+                        if (progress < 1) {
+                            setCount(Math.floor(ease * target));
+                            requestAnimationFrame(step);
+                        } else {
+                            setCount(target);
+                        }
                     };
                     requestAnimationFrame(step);
                 }
@@ -41,6 +46,12 @@ function useCountUp(target, duration = 1200) {
         observer.observe(el);
         return () => observer.disconnect();
     }, [target, duration]);
+
+    // Reset state jika target berubah secara dinamis
+    useEffect(() => {
+        setCount(0);
+        hasRun.current = false;
+    }, [target]);
 
     return { count, ref };
 }

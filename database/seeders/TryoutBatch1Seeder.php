@@ -120,11 +120,11 @@ class TryoutBatch1Seeder extends Seeder
 
         // Buat atau update master Tryout
         $tryout = Tryout::updateOrCreate(
-            ['name'      => 'UTBK SNBT 2026 - Batch 1'],
+            ['batch_name'      => 'UTBK SNBT 2026 - Batch 1'],
             ['is_active' => true]
         );
 
-        $this->command->info("Tryout dibuat: {$tryout->name} (ID: {$tryout->id})");
+        $this->command->info("Tryout dibuat: {$tryout->batch_name} (ID: {$tryout->id})");
 
         foreach ($this->subtestConfig as $config) {
             $this->command->info("\n→ Memproses subtes: {$config['name']}");

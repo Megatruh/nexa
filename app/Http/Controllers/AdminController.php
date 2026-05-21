@@ -9,8 +9,11 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
-use Illuminate\Support\Str;   // ← DIPERBAIKI: "Iluminate" → "Illuminate"
+use Illuminate\Support\Str;
 use App\Models\Subtest;
+use App\Models\TryoutQuestion;
+use App\Models\TryoutSubtest;
+use Illuminate\Support\Facades\DB;
 class AdminController extends Controller
 {
     public function dashboard(): Response
@@ -255,44 +258,232 @@ class AdminController extends Controller
     public function tryoutsIndex(Request $request): Response
     {
         $search    = $request->get('search');
-        $sort      = in_array($request->get('sort', 'title'), ['title', 'is_active', 'created_at'], true)
-                        ? $request->get('sort', 'title') : 'title';
-        $direction = in_array($request->get('direction', 'asc'), ['asc', 'desc'], true)
-                        ? $request->get('direction', 'asc') : 'asc';
+        $sort      = in_array($request->get('sort', 'batch_name'), ['batch_name', 'is_active', 'created_at'], true)
+                        ? $request->get('sort', 'batch_name') : 'batch_name';
+        $direction = in_array($request->get('direction', 'desc'), ['asc', 'desc'], true)
+                        ? $request->get('direction', 'desc') : 'desc';
         $tryouts = Tryout::query()
+            ->with('subtests')
             ->withCount('subtests')
-            ->when($search, fn ($q, $s) => $q->where('title', 'like', "%{$s}%"))
+            ->when($search, fn ($q, $s) => $q->where('batch_name', 'like', "%{$s}%"))
             ->orderBy($sort, $direction)
             ->paginate(12)
             ->withQueryString();
+            
+        // Provide standard subtests config for the frontend if they want to create a new batch
+        $standardSubtests = [
+            ['name' => 'Penalaran Umum', 'duration' => 30, 'order' => 1],
+            ['name' => 'Pengetahuan & Pemahaman Umum', 'duration' => 15, 'order' => 2],
+            ['name' => 'Pengetahuan Kuantitatif', 'duration' => 20, 'order' => 3],
+            ['name' => 'Literasi Bahasa Indonesia', 'duration' => 42.5, 'order' => 4],
+            ['name' => 'Literasi Bahasa Inggris', 'duration' => 20, 'order' => 5],
+            ['name' => 'Pemahaman Bacaan dan Menulis', 'duration' => 25, 'order' => 6],
+            ['name' => 'Penalaran Matematika', 'duration' => 42.5, 'order' => 7],
+        ];
+
         return Inertia::render('Admin/Tryouts/Index', [
             'tryouts' => $tryouts,
             'filters' => compact('sort', 'direction', 'search'),
+            'standardSubtests' => $standardSubtests,
         ]);
     }
+
     public function tryoutsStore(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'title'       => ['required', 'string', 'max:255'],
+            'batch_name'  => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'is_active'   => ['boolean'],
+            'started_at'  => ['nullable', 'date'],
+            'ended_at'    => ['nullable', 'date'],
+            'subtests'    => ['required', 'array'],
+            'subtests.*.name' => ['required', 'string'],
+            'subtests.*.duration' => ['required', 'numeric'],
+            'subtests.*.order' => ['required', 'numeric'],
+            'subtests.*.file' => ['nullable', 'file', 'mimes:csv,txt'],
         ]);
-        Tryout::create($validated);
+
+        DB::transaction(function () use ($validated) {
+            $tryout = Tryout::create([
+                'batch_name'  => $validated['batch_name'],
+                'description' => $validated['description'] ?? null,
+                'is_active'   => $validated['is_active'] ?? true,
+                'started_at'  => $validated['started_at'] ?? null,
+                'ended_at'    => $validated['ended_at'] ?? null,
+            ]);
+
+            foreach ($validated['subtests'] as $subtestData) {
+                $subtest = TryoutSubtest::create([
+                    'tryout_id' => $tryout->id,
+                    'name'      => $subtestData['name'],
+                    'duration'  => $subtestData['duration'],
+                    'order'     => $subtestData['order'],
+                ]);
+
+                if (isset($subtestData['file'])) {
+                    $this->importSoal($subtest->id, $subtestData['file']);
+                }
+            }
+        });
+
         return back()->with('success', 'Tryout berhasil ditambahkan.');
     }
+
     public function tryoutsUpdate(Request $request, Tryout $tryout): RedirectResponse
     {
         $validated = $request->validate([
-            'title'       => ['required', 'string', 'max:255'],
+            'batch_name'  => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'is_active'   => ['boolean'],
+            'started_at'  => ['nullable', 'date'],
+            'ended_at'    => ['nullable', 'date'],
+            'subtests'    => ['required', 'array'],
+            'subtests.*.id'   => ['nullable', 'exists:tryout_subtests,id'],
+            'subtests.*.name' => ['required', 'string'],
+            'subtests.*.duration' => ['required', 'numeric'],
+            'subtests.*.order' => ['required', 'numeric'],
+            'subtests.*.file' => ['nullable', 'file', 'mimes:csv,txt'],
         ]);
-        $tryout->update($validated);
+
+        DB::transaction(function () use ($validated, $tryout) {
+            $tryout->update([
+                'batch_name'  => $validated['batch_name'],
+                'description' => $validated['description'] ?? null,
+                'is_active'   => $validated['is_active'] ?? true,
+                'started_at'  => $validated['started_at'] ?? null,
+                'ended_at'    => $validated['ended_at'] ?? null,
+            ]);
+
+            $keepSubtestIds = [];
+
+            foreach ($validated['subtests'] as $subtestData) {
+                if (!empty($subtestData['id'])) {
+                    $subtest = TryoutSubtest::find($subtestData['id']);
+                    if ($subtest) {
+                        $subtest->update([
+                            'name'     => $subtestData['name'],
+                            'duration' => $subtestData['duration'],
+                            'order'    => $subtestData['order'],
+                        ]);
+                        $keepSubtestIds[] = $subtest->id;
+                    }
+                } else {
+                    $subtest = TryoutSubtest::create([
+                        'tryout_id' => $tryout->id,
+                        'name'      => $subtestData['name'],
+                        'duration'  => $subtestData['duration'],
+                        'order'     => $subtestData['order'],
+                    ]);
+                    $keepSubtestIds[] = $subtest->id;
+                }
+
+                if (isset($subtestData['file']) && isset($subtest)) {
+                    TryoutQuestion::where('tryout_subtest_id', $subtest->id)->delete();
+                    $this->importSoal($subtest->id, $subtestData['file']);
+                }
+            }
+
+            TryoutSubtest::where('tryout_id', $tryout->id)
+                ->whereNotIn('id', $keepSubtestIds)
+                ->delete();
+        });
+
         return back()->with('success', 'Tryout berhasil diperbarui.');
     }
+
     public function tryoutsDestroy(Tryout $tryout): RedirectResponse
     {
-        $tryout->delete();
-        return back()->with('success', 'Tryout berhasil dihapus.');
+        try {
+            DB::transaction(function () use ($tryout) {
+                $tryout->delete();
+            });
+            return back()->with('success', 'Tryout berhasil dihapus.');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Gagal menghapus Tryout. Mungkin ada data terkait yang menghalangi penghapusan.');
+        }
+    }
+
+    // ─── Helper Methods untuk Import CSV ───────────────────────────────────────
+
+    private function importSoal(int $subtestId, \Illuminate\Http\UploadedFile $file): void
+    {
+        $handle = fopen($file->getRealPath(), 'r');
+        if ($handle === false) return;
+
+        $bom = fread($handle, 3);
+        if ($bom !== "\xEF\xBB\xBF") {
+            rewind($handle);
+        }
+
+        $isFirstLine = true;
+        while (($row = fgetcsv($handle, 0, ',', '"', '\\')) !== false) {
+            if ($isFirstLine) {
+                $isFirstLine = false;
+                continue;
+            }
+
+            if (empty(array_filter($row, fn($cell) => trim($cell) !== ''))) continue;
+            if (count($row) < 8) continue;
+
+            $questionText   = $this->cleanCsvText($row[0]);
+            $questionImage  = $this->parseCsvImage($row[1] ?? '');
+            $optionA        = $this->cleanCsvText($row[2]);
+            $optionB        = $this->cleanCsvText($row[3]);
+            $optionC        = $this->cleanCsvText($row[4]);
+            $optionD        = $this->cleanCsvText($row[5]);
+            $optionE        = $this->cleanCsvText($row[6]);
+            $correctAnswer  = $this->parseCsvCorrectAnswer($row[7] ?? '');
+            $scoreWeight    = $this->parseCsvScoreWeight($row[8] ?? '');
+            $discussion     = $this->cleanCsvText($row[9] ?? '');
+
+            if (empty($questionText) || !in_array($correctAnswer, ['A', 'B', 'C', 'D', 'E'])) continue;
+            if (empty($optionA) || empty($optionB) || empty($optionC) || empty($optionD) || empty($optionE)) continue;
+
+            TryoutQuestion::create([
+                'tryout_subtest_id' => $subtestId,
+                'question_text'     => $questionText,
+                'question_image'    => $questionImage,
+                'option_a'          => $optionA,
+                'option_b'          => $optionB,
+                'option_c'          => $optionC,
+                'option_d'          => $optionD,
+                'option_e'          => $optionE,
+                'correct_answer'    => $correctAnswer,
+                'score_weight'      => $scoreWeight,
+                'discussion'        => $discussion ?: null,
+            ]);
+        }
+        fclose($handle);
+    }
+
+    private function cleanCsvText(string $text): string
+    {
+        $text = trim($text);
+        $text = str_replace('US$', 'USD ', $text);
+        $text = str_replace('Rp.', 'Rp', $text);
+        return $text;
+    }
+
+    private function parseCsvImage(string $value): ?string
+    {
+        $cleaned = trim($value);
+        if ($cleaned === '' || $cleaned === '-' || $cleaned === 'null' || $cleaned === 'NULL') return null;
+        if (str_starts_with($cleaned, 'soal/')) return $cleaned;
+        return 'soal/' . $cleaned;
+    }
+
+    private function parseCsvCorrectAnswer(string $value): string
+    {
+        $cleaned = strtoupper(trim($value));
+        if (preg_match('/[A-E]/', $cleaned, $matches)) return $matches[0];
+        return $cleaned;
+    }
+
+    private function parseCsvScoreWeight(string $value): int
+    {
+        $trimmed = trim($value);
+        if ($trimmed === '' || !is_numeric($trimmed)) return 1;
+        $int = (int) $trimmed;
+        return $int > 0 ? $int : 1;
     }
 }

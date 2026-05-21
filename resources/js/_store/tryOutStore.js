@@ -51,6 +51,9 @@ export const useTryoutStore = create((set, get) => ({
     /** ID sesi tryout aktif (untuk request ke server) */
     _sessionId: null,
 
+    /** ID subtest yang sedang aktif (untuk deteksi pergantian subtest) */
+    _subtestId: null,
+
     /**
      * Jawaban yang belum tersinkron ke server:
      * { [questionId]: { answer, is_doubtful } }
@@ -62,8 +65,9 @@ export const useTryoutStore = create((set, get) => ({
     /**
      * Inisialisasi store saat komponen Exam mount.
      */
-    initSesi: ({ soalList, allAnswers = {}, sisaWaktu, halamanAktif = 1, onTimeUp, sessionId }) => {
-        // Hentikan timer lama kalau ada
+    initSesi: ({ soalList, allAnswers = {}, sisaWaktu, halamanAktif = 1, onTimeUp, sessionId, subtestId }) => {
+        // Hentikan timer store jika ada (store timer tidak dipakai aktif,
+        // tapi dibersihkan untuk keamanan)
         const { _timerId } = get();
         if (_timerId) clearInterval(_timerId);
 
@@ -76,11 +80,12 @@ export const useTryoutStore = create((set, get) => ({
             currentIndex: halamanAktif - 1,
             jawaban: { ...allAnswers },
             flagged: new Set(),
-            sisaWaktu: Math.floor(sisaWaktu), // Pastikan integer dari awal
+            sisaWaktu: Math.floor(sisaWaktu),
             isTimerRunning: false,
             _timerId: null,
             _onTimeUp: onTimeUp ?? null,
             _sessionId: sessionId ?? null,
+            _subtestId: subtestId ?? null,
             _pendingSync: {},
         });
     },
@@ -413,6 +418,7 @@ export const useTryoutStore = create((set, get) => ({
             isTimerRunning: false,
             _onTimeUp: null,
             _sessionId: null,
+            _subtestId: null,
             _pendingSync: {},
         });
     },

@@ -31,7 +31,12 @@ export default function Index({ subtests }) {
                                             {subtest.name}
                                         </h3>
                                     </div>
+
                                     <div className="flex flex-wrap gap-3">
+                                        
+                                        {/* <span className="px-3 py-1 rounded-full bg-white/10 text-gray-300 text-xs border border-white/10">
+                                            {subtest.questions_count} Soal Latihan
+                                        </span> */}
                                     </div>
                                 </div>
 

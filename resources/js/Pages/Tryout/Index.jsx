@@ -28,6 +28,33 @@ const XIcon = () => (
     </svg>
 );
 
+// ─── HELPER FUNCTIONS ────────────────────────────────────────────────────────
+
+// Helper function untuk menghitung waktu relatif (diffForHumans)
+const diffForHumans = (date) => {
+    const now = new Date();
+    const pastDate = new Date(date);
+    const seconds = Math.floor((now - pastDate) / 1000);
+
+    const intervals = {
+        tahun: 31536000,
+        bulan: 2592000,
+        minggu: 604800,
+        hari: 86400,
+        jam: 3600,
+        menit: 60,
+    };
+
+    for (const [key, value] of Object.entries(intervals)) {
+        const interval = Math.floor(seconds / value);
+        if (interval >= 1) {
+            return `${interval} ${key}${interval > 1 ? '' : ''} yang lalu`;
+        }
+    }
+
+    return 'Baru saja';
+};
+
 // ─── MAIN COMPONENT ──────────────────────────────────────────────────────────
 
 export default function Index({ auth, activeTryouts, history, studyPrograms }) {
@@ -178,11 +205,11 @@ export default function Index({ auth, activeTryouts, history, studyPrograms }) {
                                     <thead>
                                         <tr className="border-b border-white/10 text-xs uppercase tracking-widest text-white/40">
                                             <th className="px-6 py-4 font-medium">Nama Try Out</th>
-                                            <th className="px-6 py-4 font-medium">Tanggal</th>
+                                            <th className="px-6 py-4 font-medium">Pilihan Jurusan</th>
                                             <th className="px-6 py-4 font-medium">Status</th>
                                             <th className="px-6 py-4 font-medium">Skor</th>
                                             <th className="px-6 py-4 font-medium">Hasil</th>
-                                            <th className="px-6 py-4 font-medium">Aksi</th>
+                                            <th className="px-6 py-4 font-medium"></th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-white/5">
@@ -191,10 +218,18 @@ export default function Index({ auth, activeTryouts, history, studyPrograms }) {
                                                 <td className="px-6 py-4 font-semibold text-white">
                                                     {session.tryout?.name || '-'}
                                                 </td>
-                                                <td className="px-6 py-4 text-white/50">
-                                                    {new Date(session.created_at).toLocaleDateString('id-ID', {
-                                                        day: 'numeric', month: 'short', year: 'numeric'
-                                                    })}
+                                                {/* KOLOM PILIHAN JURUSAN (sebelumnya: Tanggal) */}
+                                                <td className="px-6 py-4 text-white/70">
+                                                    <div className="flex flex-col gap-1.5">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] font-bold bg-indigo-500/30 border border-indigo-400/50 text-indigo-300 w-5 h-5 rounded-full flex items-center justify-center">1</span>
+                                                            <span className="text-sm font-medium">{session.choice1?.name || '-'}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-[10px] font-bold bg-white/10 border border-white/20 text-white/50 w-5 h-5 rounded-full flex items-center justify-center">2</span>
+                                                            <span className="text-sm">{session.choice2?.name || '-'}</span>
+                                                        </div>
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     {session.status === 'selesai' ? (
@@ -202,9 +237,18 @@ export default function Index({ auth, activeTryouts, history, studyPrograms }) {
                                                             Selesai
                                                         </span>
                                                     ) : (
-                                                        <span className="px-2.5 py-1 text-xs font-semibold rounded-full bg-amber-400/20 border border-amber-400/30 text-amber-300">
-                                                            Berlangsung ({session.completed_subtests || 0}/{session.total_subtests || 0})
-                                                        </span>
+                                                        <Link
+                                                            href={route('tryout.subtest.show', {
+                                                                tryout_id:  session.tryout_id,
+                                                                subtest_id: session.last_subtest_id || session.tryout?.first_subtest_id || 1,
+                                                            })}
+                                                            className="text-amber-400 hover:text-amber-300 text-sm font-semibold inline-flex items-center gap-1 transition-colors"
+                                                        >
+                                                            Lanjutkan
+                                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                                <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                                            </svg>
+                                                        </Link>
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-4">
@@ -216,31 +260,39 @@ export default function Index({ auth, activeTryouts, history, studyPrograms }) {
                                                         <span className="text-white/30">-</span>
                                                     )}
                                                 </td>
+                                                {/* KOLOM HASIL (sebelumnya dengan header) - SEKARANG TANPA HEADER */}
                                                 <td className="px-6 py-4">
-                                                    {session.admission_status === 'Lulus' ? (
-                                                        <div>
-                                                            <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 flex items-center gap-1 w-max">
-                                                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                                                </svg>
-                                                                Lulus
+                                                    <div className="flex flex-col gap-2">
+                                                        {session.admission_status === 'Lulus' ? (
+                                                            <div>
+                                                                <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 flex items-center gap-1 w-max">
+                                                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                                                    </svg>
+                                                                    Lulus
+                                                                </span>
+                                                                {session.admitted_program && (
+                                                                    <p className="text-[11px] text-white/40 mt-1.5 font-medium max-w-[150px] leading-tight">
+                                                                        {session.admitted_program}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                        ) : session.admission_status === 'Tidak Lulus' ? (
+                                                            <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-rose-500/20 border border-rose-400/30 text-rose-300">
+                                                                Tidak Lulus
                                                             </span>
-                                                            {session.admitted_program && (
-                                                                <p className="text-[11px] text-white/40 mt-1.5 font-medium max-w-[150px] leading-tight">
-                                                                    {session.admitted_program}
-                                                                </p>
-                                                            )}
-                                                        </div>
-                                                    ) : session.admission_status === 'Tidak Lulus' ? (
-                                                        <span className="px-2.5 py-1 text-xs font-bold rounded-full bg-rose-500/20 border border-rose-400/30 text-rose-300">
-                                                            Tidak Lulus
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-white/30">-</span>
-                                                    )}
+                                                        ) : (
+                                                            <span className="text-white/30">-</span>
+                                                        )}
+                                                        
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4">
-                                                    {session.status === 'selesai' ? (
+                                                    {/* TAMPILKAN KAPAN DIKERJAKAN DENGAN diffForHumans */}
+                                                        <p className="text-[11px] text-white/40 font-medium mt-1">
+                                                            {session.finished_at ? diffForHumans(session.finished_at) : diffForHumans(session.created_at)}
+                                                        </p>
+                                                    {/* {session.status === 'selesai' ? (
                                                         <Link
                                                             href={route('tryout.result', { session_id: session.id })}
                                                             className="text-indigo-400 hover:text-indigo-300 text-sm font-semibold inline-flex items-center gap-1 transition-colors"
@@ -263,7 +315,7 @@ export default function Index({ auth, activeTryouts, history, studyPrograms }) {
                                                                 <path strokeLinecap="round" strokeLinejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
                                                             </svg>
                                                         </Link>
-                                                    )}
+                                                    )} */}
                                                 </td>
                                             </tr>
                                         ))}

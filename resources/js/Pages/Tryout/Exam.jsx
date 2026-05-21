@@ -180,15 +180,28 @@ export default function Exam({
     } = useTryoutStore();
 
     const hasPendingSync = Object.keys(_pendingSync ?? {}).length > 0;
+
+    const isFinishing = useRef(false);
+    const timerIntervalRef = useRef(null);
+
+    // ─── Timer: simpan di window.__nexaTimer (module-level, bertahan lintas mount) ───
+    // Tidak pakai sessionStorage (bisa konflik antar subtest) dan tidak pakai
+    // started_at (timezone mismatch antara server UTC dan browser lokal).
+    // window.__nexaTimer adalah plain object yang hidup selama tab browser terbuka.
+    if (!window.__nexaTimer) window.__nexaTimer = {};
+    const timerKey = `${session.id}_${subtest.id}`;
+    if (!(timerKey in window.__nexaTimer)) {
+        // Pertama kali masuk subtest ini → pakai sisaWaktu dari server
+        window.__nexaTimer[timerKey] = sisaWaktu;
+    }
+
+    const [timeLeft, setTimeLeft] = useState(() => window.__nexaTimer[timerKey]);
+
     const getFormattedTime = () => {
         const mins = Math.floor(timeLeft / 60);
         const secs = timeLeft % 60;
         return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     };
-
-    const isFinishing = useRef(false);
-    const timerIntervalRef = useRef(null);
-    const [timeLeft, setTimeLeft] = useState(sisaWaktu);
 
     // ─── Callback waktu habis ─────────────────────────────────────────────────
     const handleTimeUp = useCallback(() => {
@@ -196,36 +209,28 @@ export default function Exam({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionSubtest.id]);
 
-    // ─── Timer Management: Fixed & Server-Authoritative ──────────────────────
+    // ─── Timer Management ────────────────────────────────────────────────────
     useEffect(() => {
-        // Reset timeLeft only when subtest changes
-        setTimeLeft(sisaWaktu);
+        // Sync state dari map (penting saat komponen mount ulang karena pindah soal)
+        setTimeLeft(window.__nexaTimer[timerKey]);
 
-        // Clear old interval if exists
-        if (timerIntervalRef.current) {
-            clearInterval(timerIntervalRef.current);
-        }
+        if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
 
-        // Set up new countdown timer
         timerIntervalRef.current = setInterval(() => {
             setTimeLeft(prev => {
-                if (prev <= 1) {
+                const next = prev <= 1 ? 0 : prev - 1;
+                window.__nexaTimer[timerKey] = next;
+                if (next === 0) {
                     clearInterval(timerIntervalRef.current);
                     handleTimeUp();
-                    return 0;
                 }
-                return prev - 1;
+                return next;
             });
         }, 1000);
 
-        return () => {
-            if (timerIntervalRef.current) {
-                clearInterval(timerIntervalRef.current);
-            }
-        };
-        // Only reset timer when subtest changes
+        return () => clearInterval(timerIntervalRef.current);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [subtest.id]);
+    }, [sessionSubtest.id]);
 
     // ─── Init store & Sync Answers ────────────────────────────────────────────
     useEffect(() => {
@@ -239,6 +244,7 @@ export default function Exam({
             halamanAktif: questions.current_page,
             onTimeUp:    handleTimeUp,
             sessionId:   session.id,
+            subtestId:   subtest.id,
         });
 
         // Set flagged dari server setelah init
@@ -337,6 +343,9 @@ export default function Exam({
 
         isFinishing.current = true;
         stopTimer();
+
+        // Hapus entry timer subtest ini agar tidak bocor ke sesi berikutnya
+        if (window.__nexaTimer) delete window.__nexaTimer[`${session.id}_${subtest.id}`];
 
         try {
             await flushPendingSync();

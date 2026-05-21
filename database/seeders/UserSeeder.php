@@ -26,7 +26,7 @@ class UserSeeder extends Seeder
             'email' => 'user1@example.com',
             'email_verified_at' => now(),
             'role' => 'user',
-            'password' => bcrypt('password123'),
+            'password' => bcrypt('password'),
         ]);
     }
 }

@@ -175,7 +175,7 @@ class TryoutController extends Controller
 
         // -- Hitung sisa waktu (server-authoritative) --
         $durasiDetik = $subtest->duration * 60;
-        $terpakai    = now()->diffInSeconds($sessionSubtest->started_at);
+        $terpakai    = $sessionSubtest->started_at->diffInSeconds(now());
         $sisaWaktu   = max(0, $durasiDetik - $terpakai);
 
         // Pastikan sisaWaktu selalu integer (fix bug decimal)
@@ -274,7 +274,7 @@ class TryoutController extends Controller
                     }
 
                     $durasiDetik = $question->subtest->duration * 60;
-                    $terpakai    = now()->diffInSeconds($sessionSubtest->started_at);
+                    $terpakai    = $sessionSubtest->started_at->diffInSeconds(now());
 
                     if ($terpakai > ($durasiDetik + 2)) {
                         $sessionSubtest->update(['finished_at' => now()]);

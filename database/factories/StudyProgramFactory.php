@@ -28,7 +28,6 @@ class StudyProgramFactory extends Factory
             'weight_num'=>$this->faker->numberBetween(1,5),
             'weight_abst'=>$this->faker->numberBetween(1,5),
             'weight_verb'=>$this->faker->numberBetween(1,5),
-            'passing_grade_avg'=>$this->faker->numberBetween(500,850),
         ];
     }
 }

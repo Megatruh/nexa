@@ -15,6 +15,11 @@ class TryoutSessionSubtest extends Model
         'finished_at',
     ];
     
+    protected $casts = [
+        'started_at' => 'datetime',
+        'finished_at' => 'datetime',
+    ];
+    
     public function subtest()
     {
         return $this->belongsTo(TryoutSubtest::class, 'tryout_subtest_id');

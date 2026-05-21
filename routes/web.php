@@ -90,7 +90,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         // Manajemen Materi Belajar
         Route::get('/study-materials', [AdminController::class, 'studyMaterialsIndex'])->name('study-materials.index');
         Route::post('/study-materials', [AdminController::class, 'studyMaterialsStore'])->name('study-materials.store');
-        Route::put('/study-materials/{material}', [AdminController::class, 'studyMaterialsUpdate'])->name('study-materials.update');
+        Route::post('/study-materials/{material}', [AdminController::class, 'studyMaterialsUpdate'])->name('study-materials.update');
         Route::delete('/study-materials/{material}', [AdminController::class, 'studyMaterialsDestroy'])->name('study-materials.destroy');
     });
 });

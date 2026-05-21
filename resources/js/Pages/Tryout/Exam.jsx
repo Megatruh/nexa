@@ -181,12 +181,14 @@ export default function Exam({
 
     const hasPendingSync = Object.keys(_pendingSync ?? {}).length > 0;
     const getFormattedTime = () => {
-        const mins = Math.floor(waktuStore / 60);
-        const secs = waktuStore % 60;
+        const mins = Math.floor(timeLeft / 60);
+        const secs = timeLeft % 60;
         return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
     };
 
     const isFinishing = useRef(false);
+    const timerIntervalRef = useRef(null);
+    const [timeLeft, setTimeLeft] = useState(sisaWaktu);
 
     // ─── Callback waktu habis ─────────────────────────────────────────────────
     const handleTimeUp = useCallback(() => {
@@ -194,7 +196,38 @@ export default function Exam({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionSubtest.id]);
 
-    // ─── Init store & Timer Reset on Subtest Change ───────────────────────────
+    // ─── Timer Management: Fixed & Server-Authoritative ──────────────────────
+    useEffect(() => {
+        // Reset timeLeft only when subtest changes
+        setTimeLeft(sisaWaktu);
+
+        // Clear old interval if exists
+        if (timerIntervalRef.current) {
+            clearInterval(timerIntervalRef.current);
+        }
+
+        // Set up new countdown timer
+        timerIntervalRef.current = setInterval(() => {
+            setTimeLeft(prev => {
+                if (prev <= 1) {
+                    clearInterval(timerIntervalRef.current);
+                    handleTimeUp();
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
+
+        return () => {
+            if (timerIntervalRef.current) {
+                clearInterval(timerIntervalRef.current);
+            }
+        };
+        // Only reset timer when subtest changes
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [subtest.id]);
+
+    // ─── Init store & Sync Answers ────────────────────────────────────────────
     useEffect(() => {
         // Merge allDoubtful ke flagged di store
         const doubtfulSet = new Set(allDoubtful ?? []);
@@ -213,11 +246,6 @@ export default function Exam({
             useTryoutStore.setState({ flagged: doubtfulSet });
         }
 
-        startTimer();
-
-        return () => stopTimer();
-        // Dependency array mengandung subtest.id agar timer mereset secara instan
-        // ketika user pindah ke subtes baru tanpa freeze/nyangkut ke sisa waktu lama.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [subtest.id]);
 
@@ -357,9 +385,10 @@ export default function Exam({
     const isFlagged      = flagged.has(question.id);
     const terjawab       = Object.values(jawaban).filter(Boolean).length;
     const raguragu       = [...flagged].filter(id => allQuestionIds.includes(id)).length;
-    const warningTimer   = waktuStore < 60;
+    const warningTimer   = timeLeft < 60;
     const formattedTime  = getFormattedTime();
     const pendingSync    = hasPendingSync;
+    const isLastQuestion = questions.current_page === questions.total;
 
     const getNomorStatus = (id, idx) => {
         if (questions.current_page === idx + 1) return 'aktif';
@@ -525,18 +554,44 @@ export default function Exam({
                                     </button>
                                 </div>
 
-                                {/* 3. Tombol Selanjutnya / Selesai */}
-                                {questions.current_page === questions.total ? (
-                                    <button
-                                        type="button"
-                                        onClick={() => handleFinishSubtest(false)}
-                                        disabled={isFinishing.current}
-                                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold
-                                            bg-indigo-500/80 border border-indigo-400/40 text-white
-                                            hover:bg-indigo-500 transition-colors w-full sm:w-auto justify-center flex-shrink-0"
-                                    >
-                                        Selesai Subtes <ChevronRight />
-                                    </button>
+                                {/* 3. Tombol Selanjutnya / Selesai Subtes / Selesai Tryout */}
+                                {isLastQuestion ? (
+                                    isLastSubtest ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (isFinishing.current) return;
+                                                isFinishing.current = true;
+                                                router.post(
+                                                    route('tryout.exam.submit', { session_id: session.id }),
+                                                    {},
+                                                    {
+                                                        onError: () => {
+                                                            isFinishing.current = false;
+                                                            alert('Terjadi kesalahan saat submit tryout. Silakan coba lagi.');
+                                                        },
+                                                    }
+                                                );
+                                            }}
+                                            disabled={isFinishing.current}
+                                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold
+                                                bg-rose-500/80 border border-rose-400/40 text-white
+                                                hover:bg-rose-500 transition-colors w-full sm:w-auto justify-center flex-shrink-0"
+                                        >
+                                            Selesai Tryout <ChevronRight />
+                                        </button>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleFinishSubtest(false)}
+                                            disabled={isFinishing.current}
+                                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold
+                                                bg-indigo-500/80 border border-indigo-400/40 text-white
+                                                hover:bg-indigo-500 transition-colors w-full sm:w-auto justify-center flex-shrink-0"
+                                        >
+                                            Selesai Subtes <ChevronRight />
+                                        </button>
+                                    )
                                 ) : (
                                     <button
                                         type="button"
@@ -624,19 +679,47 @@ export default function Exam({
                                 </div>
                             )}
 
-                            {/* Tombol selesai */}
-                            <button
-                                type="button"
-                                onClick={() => handleFinishSubtest(false)}
-                                disabled={isFinishing.current}
-                                className="w-full py-3 rounded-xl text-sm font-bold
-                                    bg-rose-500/20 border border-rose-500/40 text-rose-300
-                                    hover:bg-rose-500/30 hover:border-rose-400/60
-                                    active:scale-[0.98] transition-all duration-150
-                                    disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                Selesai Subtes ›
-                            </button>
+                            {/* Tombol selesai di panel samping */}
+                            {isLastQuestion && isLastSubtest ? (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (isFinishing.current) return;
+                                        isFinishing.current = true;
+                                        router.post(
+                                            route('tryout.exam.submit', { session_id: session.id }),
+                                            {},
+                                            {
+                                                onError: () => {
+                                                    isFinishing.current = false;
+                                                    alert('Terjadi kesalahan saat submit tryout. Silakan coba lagi.');
+                                                },
+                                            }
+                                        );
+                                    }}
+                                    disabled={isFinishing.current}
+                                    className="w-full py-3 rounded-xl text-sm font-bold
+                                        bg-rose-500/30 border border-rose-500/60 text-rose-200
+                                        hover:bg-rose-500/40 hover:border-rose-400/80
+                                        active:scale-[0.98] transition-all duration-150
+                                        disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Selesai Tryout ›
+                                </button>
+                            ) : (
+                                <button
+                                    type="button"
+                                    onClick={() => handleFinishSubtest(false)}
+                                    disabled={isFinishing.current}
+                                    className="w-full py-3 rounded-xl text-sm font-bold
+                                        bg-rose-500/20 border border-rose-500/40 text-rose-300
+                                        hover:bg-rose-500/30 hover:border-rose-400/60
+                                        active:scale-[0.98] transition-all duration-150
+                                        disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Selesai Subtes ›
+                                </button>
+                            )}
                         </div>
                     </div>
                 </div>

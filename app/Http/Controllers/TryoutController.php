@@ -26,7 +26,7 @@ class TryoutController extends Controller
         $user = Auth::user();
 
         // Ambil semua tryout aktif beserta info batch
-        $activeTryouts = Tryout::where('is_active', true)
+        $activeTryouts = Tryout::query()->where('is_active', true)
             ->withCount('subtests')
             ->orderBy('batch', 'desc')
             ->get()
@@ -35,14 +35,14 @@ class TryoutController extends Controller
                 $tryout->first_subtest_id = $firstSubtest?->id;
 
                 // Cek apakah user sudah punya sesi selesai di batch ini
-                $finishedSession = TryoutSession::where('user_id', $user->id)
+                $finishedSession = TryoutSession::query()->where('user_id', $user->id)
                     ->where('tryout_id', $tryout->id)
                     ->whereNotNull('finished_at')
                     ->latest()
                     ->first();
 
                 // Cek apakah ada sesi yang sedang berjalan (belum selesai)
-                $activeSession = TryoutSession::where('user_id', $user->id)
+                $activeSession = TryoutSession::query()->where('user_id', $user->id)
                     ->where('tryout_id', $tryout->id)
                     ->whereNull('finished_at')
                     ->latest()
@@ -114,11 +114,23 @@ class TryoutController extends Controller
 
         // -- Sesi Tryout --
         // Cek apakah ada sesi yang belum selesai (bisa dilanjutkan)
-        $session = TryoutSession::where('user_id', $user->id)
+        $session = TryoutSession::query()->where('user_id', $user->id)
             ->where('tryout_id', $tryout_id)
             ->whereNull('finished_at')
             ->latest()
             ->first();
+
+        // VALIDASI: Jika ada sesi yang sudah selesai, redirect ke hasil
+        $completedSession = TryoutSession::query()->where('user_id', $user->id)
+            ->where('tryout_id', $tryout_id)
+            ->whereNotNull('finished_at')
+            ->latest()
+            ->first();
+
+        if ($completedSession && !$session) {
+            return redirect()->route('tryout.index')
+                ->with('success', 'Tryout sudah diselesaikan. Lihat hasil di riwayat.');
+        }
 
         // Jika tidak ada sesi aktif, buat sesi baru
         // (sesi lama yang sudah selesai dibiarkan sebagai riwayat)
@@ -134,13 +146,13 @@ class TryoutController extends Controller
         // -------------------------------------------------------
         //  VALIDASI URUTAN SUBTEST (Anti-skip)
         // -------------------------------------------------------
-        $previousSubtests = TryoutSubtest::where('tryout_id', $tryout_id)
+        $previousSubtests = TryoutSubtest::query()->where('tryout_id', $tryout_id)
             ->where('order', '<', $subtest->order)
             ->orderBy('order', 'asc')
             ->get();
 
         foreach ($previousSubtests as $prev) {
-            $prevSession = TryoutSessionSubtest::where('tryout_session_id', $session->id)
+            $prevSession = TryoutSessionSubtest::query()->where('tryout_session_id', $session->id)
                 ->where('tryout_subtest_id', $prev->id)
                 ->first();
 
@@ -182,7 +194,7 @@ class TryoutController extends Controller
         $total     = count($allIds);
         $currentId = $allIds[$page - 1] ?? null;
 
-        $question  = $currentId ? TryoutQuestion::find($currentId) : null;
+        $question  = $currentId ? TryoutQuestion::query()->find($currentId) : null;
         $questions = new \Illuminate\Pagination\LengthAwarePaginator(
             $question ? [$question] : [],
             $total,
@@ -192,13 +204,13 @@ class TryoutController extends Controller
         );
 
         $savedAnswer = $currentId
-            ? TryoutAnswer::where('tryout_session_id', $session->id)
+            ? TryoutAnswer::query()->where('tryout_session_id', $session->id)
                 ->where('tryout_question_id', $currentId)
                 ->first()
             : null;
 
         // Ambil semua jawaban + status is_doubtful untuk minimap
-        $allAnswersRaw = TryoutAnswer::where('tryout_session_id', $session->id)
+        $allAnswersRaw = TryoutAnswer::query()->where('tryout_session_id', $session->id)
             ->whereIn('tryout_question_id', $allIds)
             ->get();
 
@@ -243,6 +255,11 @@ class TryoutController extends Controller
             $session = TryoutSession::where('id', $request->tryout_session_id)
                 ->where('user_id', Auth::id())
                 ->firstOrFail();
+
+            // VALIDASI: Jika sesi sudah selesai, tolak penyimpanan jawaban
+            if ($session->finished_at) {
+                return response()->json(['message' => 'Sesi ujian telah selesai.'], 403);
+            }
 
             // -- Validasi waktu server (anti-cheat, toleransi 2 detik) --
             $question = TryoutQuestion::with('subtest')->find($request->tryout_question_id);
@@ -308,6 +325,12 @@ class TryoutController extends Controller
             $session = TryoutSession::where('id', $sessionSubtest->tryout_session_id)
                 ->where('user_id', Auth::id())
                 ->firstOrFail();
+
+            // Guard: Jika sesi sudah selesai, redirect ke index
+            if ($session->finished_at) {
+                return redirect()->route('tryout.index')
+                    ->with('success', 'Tryout sudah diselesaikan.');
+            }
 
             if (! $sessionSubtest->finished_at) {
                 $sessionSubtest->update(['finished_at' => now()]);
@@ -381,7 +404,8 @@ class TryoutController extends Controller
             ->firstOrFail();
 
         if ($session->finished_at) {
-            return redirect()->route('tryout.result', $session->id);
+            return redirect()->route('tryout.index')
+                ->with('success', 'Tryout sudah diselesaikan. Lihat hasil di riwayat.');
         }
 
         DB::transaction(function () use ($session) {
@@ -430,6 +454,7 @@ class TryoutController extends Controller
 
             $session->update([
                 'finished_at'      => now(),
+                'status'           => 'completed',
                 'total_score'      => $totalScore,
                 'score_details'    => $scoreDetails,
                 'admission_status' => $admissionStatus,
@@ -437,8 +462,8 @@ class TryoutController extends Controller
             ]);
         });
 
-        return redirect()->route('tryout.result', $session->id)
-            ->with('success', 'Tryout berhasil diselesaikan!');
+        return redirect()->route('tryout.index')
+            ->with('success', 'Tryout berhasil diselesaikan! Lihat hasil di riwayat pengerjaan.');
     }
 
     // =========================================================
@@ -540,6 +565,12 @@ class TryoutController extends Controller
         if ($sessionId) {
             $session = TryoutSession::with('tryout.subtests.questions')->find($sessionId);
 
+            // Guard: Jika session sudah selesai, langsung ke index
+            if ($session && $session->finished_at) {
+                return redirect()->route('tryout.index')
+                    ->with('success', 'Tryout sudah diselesaikan.');
+            }
+
             if ($session && !$session->finished_at) {
                 DB::transaction(function () use ($session) {
                     $totalScore   = 0;
@@ -586,6 +617,7 @@ class TryoutController extends Controller
 
                     $session->update([
                         'finished_at'      => now(),
+                        'status'           => 'completed',
                         'total_score'      => $totalScore,
                         'score_details'    => $scoreDetails,
                         'admission_status' => $admissionStatus,
@@ -594,7 +626,8 @@ class TryoutController extends Controller
                 });
             }
 
-            return redirect()->route('tryout.result', $sessionId);
+            return redirect()->route('tryout.index')
+                ->with('success', 'Semua subtes selesai! Lihat hasil di riwayat pengerjaan.');
         }
 
         return redirect()->route('tryout.index')->with('success', 'Semua subtes selesai!');
